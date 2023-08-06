@@ -1,0 +1,10 @@
+-W -Wall -Wextra
+-Wdouble-promotion
+-Wconversion
+-Wno-sign-conversion
+-I.
+-I./include
+-I/home/lelanthran/github/include
+-Dosal_version='"0.1.2"'
+-DBUILD_TIMESTAMP='"201909162104"'
+
