@@ -26,7 +26,7 @@ int main (void)
    const char paddle[] = "-\\|/";
    uint64_t mark = 0;
 
-   printf ("osal v%s: Testing osal_timer functionality\n", osal_version);
+   printf ("Testing osal_timer functionality\n");
    osal_timer_init ();
 
    printf ("starting at: %" PRIu64 "\n ", osal_timer_since_start ());
