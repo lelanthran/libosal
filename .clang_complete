@@ -2,6 +2,8 @@
 -Wdouble-promotion
 -Wconversion
 -Wno-sign-conversion
+-DPLATFORM_POSIX
+-DPLATFORM=POSIX
 -I.
 -I./include
 -I/home/lelanthran/github/include
