@@ -1,5 +1,5 @@
 
-#if 0
+#if 1
 #ifdef PLATFORM_POSIX
 #define _GNU_SOURCE 200809L
 #endif
@@ -92,7 +92,7 @@ static uint64_t start_counter = 0;
 #endif
 
 #ifndef CLOCK_ID
-#error  CLOCK_ID not defined
+#define CLOCK_ID CLOCK_MONOTONIC_COARSE
 #endif
 
 
