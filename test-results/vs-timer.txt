@@ -1,0 +1,22 @@
+Testing osal_timer functionality
+starting OS timer cost test. The display will not be updated
+OS timer cost test: 15.15s
+Each timer call cost 17.71618us
+starting at: 15152278
+/
+Loop duration:  47267uS (0.05s)
+ending at: 15199655
+Starting expired test (15 seconds)
+ Mark at: 15199988
+............................................................
+Loop duration:  15008166uS (15.01s)
+Testing resets (reset timer for 3 seconds)
+Mark at: 30208458
+Mark at: 30208511
+............
+Loop duration:  3001559uS (3.00s)
+Mark at: 33210239
+
+C:\repos\github\libosal\vs_osal\x64\Release\test_timer.exe (process 27704) exited with code 0.
+To automatically close the console when debugging stops, enable Tools->Options->Debugging->Automatically close the console when debugging stops.
+Press any key to close this window . . .
