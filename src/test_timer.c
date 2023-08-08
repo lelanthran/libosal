@@ -29,6 +29,16 @@ int main (void)
    printf ("Testing osal_timer functionality\n");
    osal_timer_init ();
 
+   printf ("starting OS timer cost test. The display will not be updated\n");
+   osal_timer_since_start ();
+   uint64_t cost = osal_timer_since_start ();
+   for (uint64_t i=0; i < 0x0fffffff; i++) {
+      mark = osal_timer_mark_us ();
+   }
+   mark = osal_timer_since_start () - cost;
+   printf ("OS timer cost test: %.2fs\n", osal_timer_convert_us_to_s (mark));
+   printf ("Each timer call cost %.5fus\n", (double)0x0fffffff / (double)mark);
+
    printf ("starting at: %" PRIu64 "\n ", osal_timer_since_start ());
    osal_timer_mark_us ();
    for (size_t i=0; i<1024; i++) {
