@@ -139,9 +139,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\osal_thread.h" />
     <ClInclude Include="..\..\src\osal_timer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\osal_thread.c" />
     <ClCompile Include="..\..\src\osal_timer.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

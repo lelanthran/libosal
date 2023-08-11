@@ -18,9 +18,15 @@
     <ClInclude Include="..\..\src\osal_timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\osal_thread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\osal_timer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osal_thread.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
