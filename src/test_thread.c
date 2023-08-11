@@ -16,7 +16,7 @@
  */
 static osal_mutex_t mutex;
 static size_t counter;
-static const size_t addloop = 1000 * 100;
+static const size_t addloop = 1000 * 10;
 
 void thread_func (void *param)
 {
@@ -72,6 +72,7 @@ cleanup:
 
    for (size_t i=0; i<sizeof threads/sizeof threads[0]; i++) {
       osal_thread_wait (&threads[i], 1);
+      osal_thread_del (&threads[i], 1);
    }
 
    osal_mutex_del (&mutex);

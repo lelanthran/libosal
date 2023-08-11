@@ -70,6 +70,11 @@ void osal_thread_sleep (size_t micro_s)
    Sleep (param);
 }
 
+void osal_thread_del (osal_thread_t *thandle)
+{
+    CloseHandle (*thandle);
+}
+
 bool osal_mutex_new (osal_mutex_t *mutex)
 {
    *mutex = CreateMutex (NULL, false, NULL);
@@ -131,7 +136,6 @@ bool osal_thread_wait (osal_thread_t *threads, size_t nthreads)
 
 void osal_thread_sleep (size_t micro_s)
 {
-
    struct timespec tv, rem;
 
    tv.tv_sec = micro_s / 1000;
@@ -140,6 +144,10 @@ void osal_thread_sleep (size_t micro_s)
    nanosleep (&tv, &rem);
 }
 
+void osal_thread_del (osal_thread_t *thandle)
+{
+    (void)thandle;
+}
 
 bool osal_mutex_new (osal_mutex_t *mutex)
 {
