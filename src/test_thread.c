@@ -10,7 +10,9 @@
 
 /* **********************************************************************
  * On Windows this takes about ten minutes to execute, compiled Release
+ * On Linux (same machine, as a guest VM), this executes in about 20s.
  *
+ * I suspect the reason for the difference is the printf output.
  */
 static osal_mutex_t mutex;
 static size_t counter;
