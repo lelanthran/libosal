@@ -1,13 +1,13 @@
 
 /* ************************************************************
  * GOAL: Allow for minimal thread usage in multithreaded applications
- * 
+ *
  * As I don't like using any design even slightly complicated when it
  * comes to threads, the API provided is the bare minimum needed to
  * implement a multi-producer/mult-consumer queue.
- * 
+ *
  * Such a pattern allows very high-confidence multi-threaded applications:
- * 
+ *
  *  Each producer creates an object, writes the pointer to it into the
  *  queue and moves on to creating the next object.
  *
@@ -16,16 +16,16 @@
  *
  * This really is a fearless concurrency pattern than can be used in
  * any language (not just over-hyped ones). There is no risk of races.
- * 
+ *
  * Another pattern that this library is intended to support is pre-
  * created object pools. This allows large and expensive objects to all
  * be created once at program startup, stored in a pool and handed out
  * to any caller who needs a new object of that instance.
- * 
+ *
  * This requires semaphore support, so I expect to implement the
  * wrappers for semaphores once I get to the point where I need the pool
  * for some project or another.
- * 
+ *
  */
 #ifndef H_OSAL_THREAD
 #define H_OSAL_THREAD
@@ -47,18 +47,19 @@ extern "C" {
 #endif
 
    // Start a new thread, thread is started running.
-   bool osal_thread_new (osal_thread_t *thandle, osal_thread_func_t *fptr, void *param);
+   bool osal_thread_new (osal_thread_t *thandle, osal_thread_func_t *fptr,
+                         void *param);
 
-   // Wait for the specified threads to complete execution. Thread handles are specified
-   // as an array and nthreads specifies the length of the array
+   // Wait for the specified threads to complete execution. Thread handles are
+   // specified as an array and nthreads specifies the length of the array
    bool osal_thread_wait (osal_thread_t *threads, size_t nthreads);
 
    // Causes the current thread to sleep for not less than the specified number of
    // milliseconds.
    void osal_thread_sleep (size_t micro_s);
 
-   // Once a thread has completed (see `osal_thread_wait()` above), call this function
-   // to clean up all resources held by the thread.
+   // Once a thread has completed (see `osal_thread_wait()` above), call this
+   // function to clean up all resources held by the thread.
    void osal_thread_del (osal_thread_t *thandle);
 
 

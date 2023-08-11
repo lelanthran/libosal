@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <time.h>
 
 #ifdef PLATFORM_Windows
 #include <process.h>

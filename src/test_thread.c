@@ -72,7 +72,7 @@ cleanup:
 
    for (size_t i=0; i<sizeof threads/sizeof threads[0]; i++) {
       osal_thread_wait (&threads[i], 1);
-      osal_thread_del (&threads[i], 1);
+      osal_thread_del (&threads[i]);
    }
 
    osal_mutex_del (&mutex);
