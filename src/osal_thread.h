@@ -2,8 +2,15 @@
 #ifndef H_OSAL_THREAD
 #define H_OSAL_THREAD
 
-typedef uint64_t osal_thread_t;
-typedef uint64_t osal_mutex_t;
+#ifdef PLATFORM_Windows
+#include <windows.h>
+typedef HANDLE osal_thread_t;
+typedef HANDLE osal_mutex_t;
+#else
+typedef pthread_t osal_thread_t;
+typedef pthread_mutex_t osal_mutex_t;
+#endif
+
 typedef void (osal_thread_func_t) (void *);
 
 #ifdef __cplusplus

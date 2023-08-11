@@ -14,7 +14,7 @@ static size_t counter;
 void thread_func (void *param)
 {
    uint8_t self = (uint8_t)((uintptr_t)param);
-   for (size_t i=0; i<5; i++) {
+   for (size_t i=0; i<100; i++) {
       while (!(osal_mutex_acquire (&mutex))) {
          printf ("Failed to acquire mutex\n");
          osal_thread_sleep (500); // milliseconds
@@ -45,7 +45,11 @@ int main (void)
       }
    }
 
-   osal_thread_wait (threads, sizeof threads/sizeof threads[0]);
+   if (!(osal_thread_wait (threads, sizeof threads/sizeof threads[0]))) {
+      printf ("One or more threads failed to signal\n");
+   }
+
+   printf ("Counter: %zu\n", counter);
 
    ret = EXIT_SUCCESS;
 cleanup:
