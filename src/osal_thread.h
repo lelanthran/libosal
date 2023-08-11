@@ -7,6 +7,7 @@
 typedef HANDLE osal_thread_t;
 typedef HANDLE osal_mutex_t;
 #else
+#include <pthread.h>
 typedef pthread_t osal_thread_t;
 typedef pthread_mutex_t osal_mutex_t;
 #endif
@@ -21,7 +22,8 @@ extern "C" {
    bool osal_thread_wait (osal_thread_t *threads, size_t nthreads);
    void osal_thread_sleep (size_t micro_s);
 
-   bool osal_mutex_init (osal_mutex_t *mutex);
+   bool osal_mutex_new (osal_mutex_t *mutex);
+   void osal_mutex_del (osal_mutex_t *mutex);
    bool osal_mutex_acquire (osal_mutex_t *mutex);
    void osal_mutex_release (osal_mutex_t *mutex);
 
