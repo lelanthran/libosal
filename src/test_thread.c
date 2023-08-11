@@ -8,6 +8,10 @@
 
 #include "osal_thread.h"
 
+/* **********************************************************************
+ * On Windows this takes about ten minutes to execute, compiled Release
+ *
+ */
 static osal_mutex_t mutex;
 static size_t counter;
 static const size_t addloop = 1000 * 100;
@@ -18,11 +22,11 @@ void thread_func (void *param)
    for (size_t i=0; i<addloop; i++) {
       while (!(osal_mutex_acquire (&mutex))) {
          printf ("Failed to acquire mutex [%zu]:%zu\n", self, i);
-         osal_thread_sleep (0); // milliseconds
+         osal_thread_sleep (1); // milliseconds, slows things down.
       }
       counter++;
       osal_mutex_release (&mutex);
-      printf ("%" PRIu8 ": %zu\n", self, i);
+      printf ("%zu: %zu\n", self, i);
    }
 }
 
@@ -44,7 +48,7 @@ int main (void)
          printf ("Failed to create thread [%zu]\n", i);
          goto cleanup;
       }
-      printf ("Created thread :%zu:%zu\n", (size_t)threads[i], i);
+      printf ("Created thread :%zu:%zu\n", (size_t)(threads[i]), i);
    }
 
    if (!(osal_thread_wait (threads, sizeof threads/sizeof threads[0]))) {

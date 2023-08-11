@@ -48,7 +48,7 @@ bool osal_thread_new (osal_thread_t *thandle, osal_thread_func_t *fptr, void *pa
    tr->fptr = fptr;
    tr->param = param;
 
-   *thandle = _beginthreadex (NULL, 0, trunner, tr, 0, NULL);
+   *thandle = (HANDLE)_beginthreadex (NULL, 0, trunner, tr, 0, NULL);
 
    return *thandle != 0;
 }
@@ -66,7 +66,7 @@ bool osal_thread_wait (osal_thread_t *threads, size_t nthreads)
 void osal_thread_sleep (size_t micro_s)
 {
    DWORD mask = (DWORD)0xffffffffULL;
-   DWORD param = micro_s & mask;
+   DWORD param = (DWORD)(micro_s & mask);
    Sleep (param);
 }
 
@@ -74,6 +74,11 @@ bool osal_mutex_new (osal_mutex_t *mutex)
 {
    *mutex = CreateMutex (NULL, false, NULL);
    return *mutex != NULL;
+}
+
+void osal_mutex_del (osal_mutex_t *mutex)
+{
+   CloseHandle (*mutex);
 }
 
 bool osal_mutex_acquire (osal_mutex_t *mutex)
