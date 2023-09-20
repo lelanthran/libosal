@@ -129,9 +129,9 @@ endif
 
 TARGET:=$(shell $(GCC) -dumpmachine)
 T_ARCH=$(shell $(GCC) -dumpmachine | cut -f 1 -d - )
-OUTLIB:=$(OUTDIR)/lib/$(TARGET)
-OUTBIN:=$(OUTDIR)/bin/$(TARGET)
-OUTOBS:=$(OUTDIR)/obs/$(TARGET)
+OUTLIB:=$(OUTDIR)/$(TARGET)/lib
+OUTBIN:=$(OUTDIR)/$(TARGET)/bin
+OUTOBS:=$(OUTDIR)/$(TARGET)/obs
 OUTDIRS:=$(OUTLIB) $(OUTBIN) $(OUTOBS) include
 
 # ######################################################################
@@ -298,8 +298,10 @@ real-help:
 
 
 real-all:	$(OUTDIRS) $(DYNLIB) $(STCLIB) $(BINPROGS)
+	@unlink ./recent/default-platform || rm -rf ./recent/default-platform
 	@unlink ./recent || rm -rf ./recent
 	@ln -s $(OUTDIR) ./recent
+	@ln -s ./$(TARGET) $(OUTDIR)/default-platform
 
 all:	$(SWIG_WRAPPERS) real-all
 	@$(ECHO) "[$(CYAN)Soft linking$(NONE)]    [$(STCLNK_TARGET)]"
@@ -480,7 +482,7 @@ clean-debug:
 	@rm -rfv debug wrappers
 
 clean-all:	clean-release clean-debug
-	@unlink ./recent || rm -rf ./recent
+	@unlink ./recent &>/dev/null || rm -rfv ./recent
 	@rm -rfv include
 	@rm -rfv `find . | grep "\.d$$"`
 

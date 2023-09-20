@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libosal", "libosal\libosal.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_timer", "test_timer\test_timer.vcxproj", "{269ADD1D-ECAB-48F9-8BCC-51E3C2A41270}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_thread", "test_thread\test_thread.vcxproj", "{EF81FB85-5330-44FF-8550-0EE414D1AF78}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{269ADD1D-ECAB-48F9-8BCC-51E3C2A41270}.Release|x64.Build.0 = Release|x64
 		{269ADD1D-ECAB-48F9-8BCC-51E3C2A41270}.Release|x86.ActiveCfg = Release|Win32
 		{269ADD1D-ECAB-48F9-8BCC-51E3C2A41270}.Release|x86.Build.0 = Release|Win32
+		{EF81FB85-5330-44FF-8550-0EE414D1AF78}.Debug|x64.ActiveCfg = Debug|x64
+		{EF81FB85-5330-44FF-8550-0EE414D1AF78}.Debug|x64.Build.0 = Debug|x64
+		{EF81FB85-5330-44FF-8550-0EE414D1AF78}.Debug|x86.ActiveCfg = Debug|Win32
+		{EF81FB85-5330-44FF-8550-0EE414D1AF78}.Debug|x86.Build.0 = Debug|Win32
+		{EF81FB85-5330-44FF-8550-0EE414D1AF78}.Release|x64.ActiveCfg = Release|x64
+		{EF81FB85-5330-44FF-8550-0EE414D1AF78}.Release|x64.Build.0 = Release|x64
+		{EF81FB85-5330-44FF-8550-0EE414D1AF78}.Release|x86.ActiveCfg = Release|Win32
+		{EF81FB85-5330-44FF-8550-0EE414D1AF78}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
