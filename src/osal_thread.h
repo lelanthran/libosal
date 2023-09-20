@@ -56,7 +56,7 @@ extern "C" {
 
    // Causes the current thread to sleep for not less than the specified number of
    // milliseconds.
-   void osal_thread_sleep (size_t micro_s);
+   void osal_thread_sleep (size_t milliseconds);
 
    // Once a thread has completed (see `osal_thread_wait()` above), call this
    // function to clean up all resources held by the thread.

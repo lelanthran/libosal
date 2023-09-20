@@ -64,7 +64,7 @@ bool osal_thread_wait (osal_thread_t *threads, size_t nthreads)
    return rc;
 }
 
-void osal_thread_sleep (size_t micro_s)
+void osal_thread_sleep (size_t milliseconds)
 {
    DWORD mask = (DWORD)0xffffffffULL;
    DWORD param = (DWORD)(micro_s & mask);
