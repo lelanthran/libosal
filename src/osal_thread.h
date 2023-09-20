@@ -95,7 +95,7 @@ extern "C" {
    // to zero before any acquisitions and releases are performed.
    //
    // Returns true if the fast mutex is acquired, false if it was not.
-   bool osal_ftex_acquire (uint32_t *target);
+   bool osal_ftex_acquire (uint32_t *target, const char *id);
 
    // Release a fast mutex. A fast mutex is an in-process mutex that will
    // never cause a kernel context-switch. The target must be initialised
@@ -103,7 +103,7 @@ extern "C" {
    //
    // Returns true if the fast mutex was released, false if it is still
    // held.
-   bool osal_ftex_release (uint32_t *target);
+   bool osal_ftex_release (uint32_t *target, const char *id);
 
 #ifdef __cplusplus
 };

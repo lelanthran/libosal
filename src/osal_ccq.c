@@ -1,10 +1,18 @@
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 #include "osal_ccq.h"
 #include "osal_thread.h"
 #include "osal_timer.h"
+
+#undef USE_MUTEX
+#define USE_FTEX 1
+
+// #define USE_MUTEX 1
+// #undef USE_FTEX
 
 struct message_t {
    void *message;
@@ -16,9 +24,32 @@ struct osal_ccq_t {
    size_t array_len;
    size_t index_insert;
    size_t index_retrieve;
+#ifdef USE_MUTEX
    osal_mutex_t mutex;
+#endif
+
+#ifdef USE_FTEX
+   uint32_t mutex;
+#endif
 };
 
+
+void osal_ccq_dump (osal_ccq_t *ccq)
+{
+   if (!ccq) {
+      fprintf (stdout, "NULL ccq_t object\n");
+      return;
+   }
+
+#ifdef USE_FTEX
+   fprintf (stdout, "register %" PRIu32 "\n", ccq->mutex);
+#endif
+
+#ifdef USE_MUTEX
+   fprintf (stdout, "using mutex, no count\n");
+#endif
+
+}
 
 osal_ccq_t *osal_ccq_new (size_t nelements)
 {
@@ -28,9 +59,14 @@ osal_ccq_t *osal_ccq_new (size_t nelements)
       goto cleanup;
    }
 
+#ifdef USE_MUTEX
    if (!(osal_mutex_new (&ret->mutex))) {
       goto cleanup;
    }
+#endif
+#ifdef USE_FTEX
+   ret->mutex = 0;
+#endif
 
    if (!(ret->array = malloc (sizeof *ret->array * nelements))) {
       goto cleanup;
@@ -55,7 +91,9 @@ void osal_ccq_del (osal_ccq_t *ccq)
    if (!ccq)
       return;
 
+#ifdef USE_MUTEX
    osal_mutex_del (&ccq->mutex);
+#endif
 
    free (ccq->array);
 
@@ -66,9 +104,16 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
 {
    bool ret = false;
    uint64_t now = osal_timer_since_start();
+#ifdef USE_MUTEX
    if (!(osal_mutex_acquire(&ccq->mutex))) {
       goto cleanup;
    }
+#endif
+#ifdef USE_FTEX
+   while (!(osal_ftex_acquire (&ccq->mutex, "nq")))
+      ;
+
+#endif
 
    /* **************************************************************
     * Tricky!
@@ -100,10 +145,18 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
    }
 
    // We are done. Now the retrieval will take of of some details.
+
    ret = true;
 cleanup:
 
+#ifdef USE_MUTEX
    osal_mutex_release(&ccq->mutex);
+#endif
+#ifdef USE_FTEX
+   while (!(osal_ftex_release (&ccq->mutex, "nq")))
+      ;
+#endif
+
    return ret;
 }
 
@@ -111,9 +164,16 @@ bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
 {
    bool ret = false;
 
+#ifdef USE_MUTEX
    if (!(osal_mutex_acquire(&ccq->mutex))) {
       goto cleanup;
    }
+#endif
+#ifdef USE_FTEX
+   while (!(osal_ftex_acquire (&ccq->mutex, "dq")))
+      ;
+
+#endif
 
    /* **************************************************************
     * More trickness!
@@ -143,7 +203,13 @@ bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
 
    ret = true;
 cleanup:
+#ifdef USE_MUTEX
    osal_mutex_release(&ccq->mutex);
+#endif
+#ifdef USE_FTEX
+   while (!(osal_ftex_release (&ccq->mutex, "dq")))
+      ;
+#endif
    return ret;
 }
 

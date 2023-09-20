@@ -8,6 +8,8 @@ typedef struct osal_ccq_t osal_ccq_t;
 extern "C" {
 #endif
 
+   void osal_ccq_dump (osal_ccq_t *ccq);
+
    /* Create a bounded queue of nelements. Returns NULL
     * on error or a pointer to an object of type osal
     * ccq_t on success;

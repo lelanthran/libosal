@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+#include <inttypes.h>
 
 #ifdef PLATFORM_Windows
 #include <process.h>
@@ -177,20 +178,29 @@ bool osal_cmpxchange (uint32_t *target, uint32_t newval, uint32_t comparand)
                                        newval,
                                        false,
                                        __ATOMIC_ACQ_REL,
-                                       __ATOMIC_RELAXED);
+                                       __ATOMIC_ACQUIRE);
 }
-
-bool osal_ftex_acquire (uint32_t *target)
-{
-   return osal_cmpxchange (target, 1, 0);
-}
-
-bool osal_ftex_release (uint32_t *target)
-{
-   // This can simply be a set operation, not necessary for
-   // compare-and-exchange.
-   return osal_cmpxchange (target, 0, 1);
-}
-
 
 #endif
+
+
+bool osal_ftex_acquire (uint32_t *target, const char *id)
+{
+   for (size_t i=0; i<5; i++) {
+      if (osal_cmpxchange (target, 1, 0)) {
+         return true;
+      }
+   }
+   return false;
+}
+
+bool osal_ftex_release (uint32_t *target, const char *id)
+{
+   for (size_t i=0; i<5; i++) {
+      if (osal_cmpxchange (target, 0, 1)) {
+         return true;
+      }
+   }
+   return false;
+}
+

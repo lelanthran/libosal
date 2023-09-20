@@ -29,37 +29,41 @@ static void consumer (void *param)
    uint64_t prev_time = osal_timer_since_start();
    size_t expected = 0;
    size_t msg_number = (size_t)-1;
+   uint64_t total_duration = 0;
 
    while (true) {
-      if ((osal_ccq_dq (queue, (void **)&message, &nq_time)) == true) {
-
-         // End the thread if NULL is returned.
-         if (message == NULL) {
-            break;
-         }
-
-         uint64_t duration = nq_time - prev_time;
-         printf ("[consumer]: rxed [%s], spent %.2fms in queue\n",
-                  message, duration/1000.0);
-         if ((sscanf (message, "%zu", &msg_number)) != 1) {
-            fprintf (stderr, "[consumer] Missing message number [%s]\n", message);
-            break;
-         }
-         if (msg_number != expected) {
-            fprintf (stderr, "[consumer] Expected %zu, got %zu\n",
-                  expected, msg_number);
-            break;
-         }
-
-         prev_time = nq_time;
-         free (message);
-         message = NULL;
-
-         expected++;
+      if ((osal_ccq_dq (queue, (void **)&message, &nq_time)) == false) {
+         osal_thread_sleep(1);
+         continue;
       }
+
+      // End the thread if NULL is returned.
+      if (message == NULL) {
+         break;
+      }
+
+      uint64_t duration = nq_time - prev_time;
+      total_duration += duration;
+      if ((sscanf (message, "%zu", &msg_number)) != 1) {
+         fprintf (stderr, "[consumer] Missing message number [%s]\n", message);
+         break;
+      }
+      if (msg_number != expected) {
+         fprintf (stderr, "[consumer] Expected %zu, got %zu\n",
+               expected, msg_number);
+         break;
+      }
+
+      prev_time = nq_time;
+      free (message);
+      message = NULL;
+
+      expected++;
    }
 
    printf ("[consumer] Completed\n");
+   printf ("[consumer] Total queue duration(us): %" PRIu64 "us\n", total_duration);
+   printf ("[consumer] Total queue duration(s): %.2fs\n", total_duration/1000000.0);
    free (message);
 }
 
@@ -68,15 +72,19 @@ static void producer (void *param)
    osal_ccq_t *queue = param;
    printf ("[producer]: Started\n");
    char message[50];
-   for (size_t i=0; i<999; i++) {
+   for (size_t i=0; i<9999; i++) {
       snprintf (message, sizeof message, "%zu message", i);
       char *msg = lstrdup (message);
-      while (!(osal_ccq_nq (queue, msg)))
-         ;
-      printf ("[producer]: txed [%s]\n", message);
+      while (!(osal_ccq_nq (queue, msg))) {
+         osal_thread_sleep(1);
+      }
    }
 
-   osal_ccq_nq (queue, NULL);
+   while (!(osal_ccq_nq (queue, NULL))) {
+      osal_thread_sleep (1);
+   }
+
+   printf ("[producer]: Completed\n");
 }
 
 
@@ -87,7 +95,7 @@ int main (void)
 
    osal_ccq_t *queue = NULL;
 
-   queue = osal_ccq_new (10);
+   queue = osal_ccq_new (3);
    if (!queue) {
       fprintf (stderr, "Failed to create a new queue\n");
       goto cleanup;
