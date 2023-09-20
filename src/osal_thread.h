@@ -80,6 +80,31 @@ extern "C" {
    void osal_mutex_release (osal_mutex_t *mutex);
 
 
+   // Use atomic compare and exchange for in-process mutex (mutex is not
+   // in-process; it can and does cause kernel context switches).
+   //
+   // Due to Win32 API restrictions only a 32-bit unsigned integer can be
+   // used as the mutex. This is not a problem as the mutex only has two
+   // states.
+   //
+   // Might be a problem if this is used to create an in-process semaphore.
+   bool osal_cmpxchange (uint32_t *target, uint32_t newval, uint32_t compare);
+
+   // Acquire a fast mutex. A fast mutex is an in-process mutex that will
+   // never cause a kernel context-switch. The target must be initialised
+   // to zero before any acquisitions and releases are performed.
+   //
+   // Returns true if the fast mutex is acquired, false if it was not.
+   bool osal_ftex_acquire (uint32_t *target);
+
+   // Release a fast mutex. A fast mutex is an in-process mutex that will
+   // never cause a kernel context-switch. The target must be initialised
+   // to zero before any acquisitions and releases are performed.
+   //
+   // Returns true if the fast mutex was released, false if it is still
+   // held.
+   bool osal_ftex_release (uint32_t *target);
+
 #ifdef __cplusplus
 };
 #endif

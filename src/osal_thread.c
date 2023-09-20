@@ -170,5 +170,27 @@ void osal_mutex_release (osal_mutex_t *mutex)
    pthread_mutex_unlock (mutex);
 }
 
+bool osal_cmpxchange (uint32_t *target, uint32_t newval, uint32_t comparand)
+{
+   return __atomic_compare_exchange_n (target,
+                                       &comparand,
+                                       newval,
+                                       false,
+                                       __ATOMIC_ACQ_REL,
+                                       __ATOMIC_RELAXED);
+}
+
+bool osal_ftex_acquire (uint32_t *target)
+{
+   return osal_cmpxchange (target, 1, 0);
+}
+
+bool osal_ftex_release (uint32_t *target)
+{
+   // This can simply be a set operation, not necessary for
+   // compare-and-exchange.
+   return osal_cmpxchange (target, 0, 1);
+}
+
 
 #endif
