@@ -104,17 +104,21 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
 {
    bool ret = false;
    uint64_t now = osal_timer_since_start();
+   bool acquired = false;
+
 #ifdef USE_MUTEX
    if (!(osal_mutex_acquire(&ccq->mutex))) {
       goto cleanup;
    }
 #endif
 #ifdef USE_FTEX
-   while (!(osal_ftex_acquire (&ccq->mutex, "nq")))
-      ;
+   if (!(osal_ftex_acquire (&ccq->mutex, "nq"))) {
+      goto cleanup;
+   }
 
 #endif
 
+   acquired = true;
    /* **************************************************************
     * Tricky!
     */
@@ -149,13 +153,28 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
    ret = true;
 cleanup:
 
+   if (acquired) {
+      bool released = false;
 #ifdef USE_MUTEX
-   osal_mutex_release(&ccq->mutex);
+      for (size_t i=0; i<1000; i++) {
+         if ((osal_mutex_release (&ccq->mutex)) == true) {
+            released = true;
+            break;
+         }
+         osal_thread_sleep (1);
+      }
 #endif
 #ifdef USE_FTEX
-   while (!(osal_ftex_release (&ccq->mutex, "nq")))
-      ;
+      for (size_t i=0; i<1000; i++) {
+         if ((osal_ftex_release (&ccq->mutex, "nq")) == true) {
+            released = true;
+            break;
+         }
+         osal_thread_sleep (1);
+      }
 #endif
+      ret = ret && released;
+   }
 
    return ret;
 }
@@ -163,17 +182,24 @@ cleanup:
 bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
 {
    bool ret = false;
+   bool acquired = false;
 
 #ifdef USE_MUTEX
    if (!(osal_mutex_acquire(&ccq->mutex))) {
+      *dst = NULL;
+      *nq_time = 0;
       goto cleanup;
    }
 #endif
 #ifdef USE_FTEX
-   while (!(osal_ftex_acquire (&ccq->mutex, "dq")))
-      ;
-
+   if (!(osal_ftex_acquire (&ccq->mutex, "dq"))) {
+      *dst = NULL;
+      *nq_time = 0;
+      goto cleanup;
+   }
 #endif
+
+   acquired = true;
 
    /* **************************************************************
     * More trickness!
@@ -181,6 +207,7 @@ bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
 
    // If the queue is already empty, bail.
    if (ccq->index_retrieve == (size_t)-1) {
+      ret = true;
       goto cleanup;
    }
 
@@ -203,13 +230,29 @@ bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
 
    ret = true;
 cleanup:
+
+   if (acquired) {
+      bool released = false;
 #ifdef USE_MUTEX
-   osal_mutex_release(&ccq->mutex);
+      for (size_t i=0; i<1000; i++) {
+         if ((osal_mutex_release (&ccq->mutex)) == true) {
+            released = true;
+            break;
+         }
+         osal_thread_sleep (1);
+      }
 #endif
 #ifdef USE_FTEX
-   while (!(osal_ftex_release (&ccq->mutex, "dq")))
-      ;
+      for (size_t i=0; i<1000; i++) {
+         if ((osal_ftex_release (&ccq->mutex, "dq")) == true) {
+            released = true;
+            break;
+         }
+         osal_thread_sleep (1);
+      }
 #endif
+      ret = ret && released;
+   }
    return ret;
 }
 

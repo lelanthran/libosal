@@ -163,12 +163,22 @@ void osal_mutex_del (osal_mutex_t *mutex)
 
 bool osal_mutex_acquire (osal_mutex_t *mutex)
 {
-   return pthread_mutex_trylock (mutex) == 0;
+   for (size_t i=0; i<5; i++) {
+      if ((pthread_mutex_trylock (mutex)) == 0) {
+         return true;
+      }
+   }
+   return false;
 }
 
-void osal_mutex_release (osal_mutex_t *mutex)
+bool osal_mutex_release (osal_mutex_t *mutex)
 {
-   pthread_mutex_unlock (mutex);
+   for (size_t i=0; i<5; i++) {
+      if ((pthread_mutex_unlock (mutex)) == 0) {
+         return true;
+      }
+   }
+   return false;
 }
 
 bool osal_cmpxchange (uint32_t *target, uint32_t newval, uint32_t comparand)
@@ -186,6 +196,7 @@ bool osal_cmpxchange (uint32_t *target, uint32_t newval, uint32_t comparand)
 
 bool osal_ftex_acquire (uint32_t *target, const char *id)
 {
+   (void)id;
    for (size_t i=0; i<5; i++) {
       if (osal_cmpxchange (target, 1, 0)) {
          return true;
@@ -196,6 +207,7 @@ bool osal_ftex_acquire (uint32_t *target, const char *id)
 
 bool osal_ftex_release (uint32_t *target, const char *id)
 {
+   (void)id;
    for (size_t i=0; i<5; i++) {
       if (osal_cmpxchange (target, 0, 1)) {
          return true;

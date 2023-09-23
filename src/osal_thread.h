@@ -63,7 +63,8 @@ extern "C" {
    void osal_thread_del (osal_thread_t *thandle);
 
 
-   // Create a new mutex. Named mutexes are not supported.
+   // Create a new mutex. Named mutexes are not supported. The newly created
+   // mutex is a recursive mutex.
    bool osal_mutex_new (osal_mutex_t *mutex);
 
    // Delete a mutex created with `osal_mutex_new()`. If the mutex
@@ -74,10 +75,14 @@ extern "C" {
    // Acquire the mutex. While the mutex is acquired, other callers attempting to
    // acquire the same mutex will block. Only one caller will ever hold the
    // same mutex at the same time.
+   //
+   // Returns true if the mute was acquired, false if it was not.
    bool osal_mutex_acquire (osal_mutex_t *mutex);
 
    // Release a mutex that was acquired.
-   void osal_mutex_release (osal_mutex_t *mutex);
+   //
+   // Returns true if the mute was released, false if it was not.
+   bool osal_mutex_release (osal_mutex_t *mutex);
 
 
    // Use atomic compare and exchange for in-process mutex (mutex is not

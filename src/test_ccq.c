@@ -20,6 +20,8 @@ static char *lstrdup (const char *src)
    return ret;
 }
 
+#define END_MESSAGE        ("quit")
+
 static void consumer (void *param)
 {
    osal_ccq_t *queue = param;
@@ -33,14 +35,23 @@ static void consumer (void *param)
 
    while (true) {
       if ((osal_ccq_dq (queue, (void **)&message, &nq_time)) == false) {
+         fprintf (stderr, "dequeue failure\n");
          osal_thread_sleep(1);
          continue;
       }
 
-      // End the thread if NULL is returned.
+      // No messages were rxed, continue
       if (message == NULL) {
+         osal_thread_sleep (1);
+         continue;
+      }
+
+      // If message is "quit" then end the loop
+      if ((strcmp (message, END_MESSAGE)) == 0) {
+         message = NULL;
          break;
       }
+
 
       uint64_t duration = nq_time - prev_time;
       total_duration += duration;
@@ -76,11 +87,12 @@ static void producer (void *param)
       snprintf (message, sizeof message, "%zu message", i);
       char *msg = lstrdup (message);
       while (!(osal_ccq_nq (queue, msg))) {
+         // fprintf (stderr, "enqueue failure [%s]\n", msg);
          osal_thread_sleep(1);
       }
    }
 
-   while (!(osal_ccq_nq (queue, NULL))) {
+   while (!(osal_ccq_nq (queue, END_MESSAGE))) {
       osal_thread_sleep (1);
    }
 

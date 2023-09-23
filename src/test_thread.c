@@ -27,7 +27,11 @@ void thread_func (void *param)
          osal_thread_sleep (1); // milliseconds, slows things down.
       }
       counter++;
-      osal_mutex_release (&mutex);
+      while (!(osal_mutex_release (&mutex))) {
+         printf ("Failed to release mutex [%zu]:%zu\n", self, i);
+         osal_thread_sleep (1);
+      }
+
       printf ("%zu: %zu\n", self, i);
    }
 }
