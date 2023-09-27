@@ -8,11 +8,11 @@
 #include "osal_thread.h"
 #include "osal_timer.h"
 
-#undef USE_MUTEX
-#define USE_FTEX 1
+// #undef USE_MUTEX
+// #define USE_FTEX 1
 
-// #define USE_MUTEX 1
-// #undef USE_FTEX
+#define USE_MUTEX 1
+#undef USE_FTEX
 
 struct message_t {
    void *message;
@@ -161,7 +161,7 @@ cleanup:
             released = true;
             break;
          }
-         osal_thread_sleep (1);
+         // osal_thread_sleep (1);
       }
 #endif
 #ifdef USE_FTEX
@@ -170,7 +170,7 @@ cleanup:
             released = true;
             break;
          }
-         osal_thread_sleep (1);
+         // osal_thread_sleep (1);
       }
 #endif
       ret = ret && released;
@@ -239,7 +239,7 @@ cleanup:
             released = true;
             break;
          }
-         osal_thread_sleep (1);
+         // osal_thread_sleep (1);
       }
 #endif
 #ifdef USE_FTEX
@@ -248,10 +248,57 @@ cleanup:
             released = true;
             break;
          }
-         osal_thread_sleep (1);
+         // osal_thread_sleep (1);
       }
 #endif
       ret = ret && released;
+   }
+   return ret;
+}
+
+size_t osal_ccq_count (osal_ccq_t *ccq)
+{
+   size_t ret = 0;
+   bool acquired = false;
+
+#ifdef USE_MUTEX
+   if (!(osal_mutex_acquire(&ccq->mutex))) {
+      goto cleanup;
+   }
+#endif
+#ifdef USE_FTEX
+   if (!(osal_ftex_acquire (&ccq->mutex, "dq"))) {
+      goto cleanup;
+   }
+#endif
+
+   acquired = true;
+   ret = ccq->index_insert - ccq->index_retrieve;
+
+cleanup:
+   if (acquired) {
+      bool released = false;
+#ifdef USE_MUTEX
+      for (size_t i=0; i<1000; i++) {
+         if ((osal_mutex_release (&ccq->mutex)) == true) {
+            released = true;
+            break;
+         }
+         // osal_thread_sleep (1);
+      }
+#endif
+#ifdef USE_FTEX
+      for (size_t i=0; i<1000; i++) {
+         if ((osal_ftex_release (&ccq->mutex, "dq")) == true) {
+            released = true;
+            break;
+         }
+         // osal_thread_sleep (1);
+      }
+#endif
+      if (!released) {
+         ret = (size_t)-1;
+      }
    }
    return ret;
 }

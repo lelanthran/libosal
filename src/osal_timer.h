@@ -9,7 +9,7 @@ typedef struct osal_timer_t osal_timer_t;
 #define osal_timer_convert_us_to_s(x)\
    (double)((double)x / 1000000.0)
 #define osal_timer_convert_us_to_ms(x)\
-   (double)((double)x * 1000.0)
+   (double)((double)x / 1000.0)
 #define osal_timer_convert_s_to_us(x)\
    (uint64_t)((uint64_t)x * (uint64_t)1000000ULL)
 #define osal_timer_convert_ms_to_us(x)\

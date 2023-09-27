@@ -58,6 +58,9 @@ extern "C" {
     */
    bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time);
 
+   /* Returns a count of elements in the queue */
+   size_t osal_ccq_count (osal_ccq_t *ccq);
+
 #ifdef __cplusplus
 };
 #endif
