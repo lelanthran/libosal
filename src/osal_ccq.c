@@ -8,11 +8,11 @@
 #include "osal_thread.h"
 #include "osal_timer.h"
 
-// #undef USE_MUTEX
-// #define USE_FTEX 1
+#undef USE_MUTEX
+#define USE_FTEX 1
 
-#define USE_MUTEX 1
-#undef USE_FTEX
+// #define USE_MUTEX 1
+// #undef USE_FTEX
 
 struct message_t {
    void *message;
@@ -29,7 +29,7 @@ struct osal_ccq_t {
 #endif
 
 #ifdef USE_FTEX
-   uint32_t mutex;
+   uint64_t mutex;
 #endif
 };
 
@@ -42,7 +42,7 @@ void osal_ccq_dump (osal_ccq_t *ccq)
    }
 
 #ifdef USE_FTEX
-   fprintf (stdout, "register %" PRIu32 "\n", ccq->mutex);
+   fprintf (stdout, "register %" PRIu64 "\n", ccq->mutex);
 #endif
 
 #ifdef USE_MUTEX
