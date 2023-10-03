@@ -4,19 +4,14 @@
 
 
 typedef struct osal_timer_t osal_timer_t;
+enum osal_clock_t {
+   osal_clock_COARSE,      // fast, low granularity
+   osal_clock_PRECISE,     // slow, affected by adjtime and NTP
+   osal_clock_RAW,         // slow, hardware clock, unaffected by anything
+};
 
-// Convenience macros to convert to/from microseconds
-#if 0
-#define osal_timer_convert_us_to_s(x)\
-   (double)((double)x / 1000000.0)
-#define osal_timer_convert_us_to_ms(x)\
-   (double)((double)x / 1000.0)
-#define osal_timer_convert_s_to_us(x)\
-   (uint64_t)((uint64_t)x * (uint64_t)1000000ULL)
-#define osal_timer_convert_ms_to_us(x)\
-   (uint64_t)((uint64_t)x * (uint64_t)1000ULL)
-#endif
 
+// Convenience macros to convert to/from nanoseconds
 #define osal_timer_convert_ns_to_s(x)\
    (double)((double)x / 1000000000.0)
 #define osal_timer_convert_ns_to_ms(x)\
@@ -33,6 +28,11 @@ extern "C" {
    // Return the resolution of the clock used in this library, in
    // nanoseconds.
    uint64_t osal_timer_resolution (void);
+
+   // Set the clock to use for all functions (see enum for explanation).
+   // Does nothing on Windows because Windows doesn't offer different
+   // options for QueryPerformanceCounter.
+   bool osal_timer_setclock (enum osal_clock_t clk);
 
    // Initialise all the timer structures and values.
    void osal_timer_init (void);

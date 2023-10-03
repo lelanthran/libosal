@@ -40,7 +40,7 @@ int main (void)
    }
    mark = osal_timer_since_start () - cost;
    printf ("OS timer cost test: %.2fs\n", osal_timer_convert_ns_to_s (mark));
-   printf ("Each timer call cost %.5fus\n", (double)0x0fffffff / (double)mark);
+   printf ("Each timer call cost %.5fns\n", (double)0x0fffffff / (double)mark);
 
    printf ("Starting OS timer duplicate test. The display will not be updated\n");
    uint64_t prev_mark = osal_timer_since_start ();
@@ -73,7 +73,8 @@ int main (void)
    }
 
    mark = osal_timer_mark_ns ();
-   printf ("\nLoop duration:  %" PRIu64 "uS (%.2fs)\n", mark, osal_timer_convert_ns_to_s (mark));
+   printf ("\nLoop duration:  %" PRIu64 "ns (%.2fs)\n",
+            mark, osal_timer_convert_ns_to_s (mark));
    printf ("ending at: %" PRIu64 " \n", osal_timer_since_start ());
 
 
@@ -88,7 +89,7 @@ int main (void)
       spinwait (osal_timer_convert_ms_to_ns (250));
    }
    mark = osal_timer_mark_ns ();
-   printf ("\nLoop duration:  %" PRIu64 "uS (%.2fs)\n", mark, osal_timer_convert_ns_to_s (mark));
+   printf ("\nLoop duration:  %" PRIu64 "ns (%.2fs)\n", mark, osal_timer_convert_ns_to_s (mark));
 
    printf ("Testing resets (reset timer for 3 seconds)\n");
    printf ("Mark at: %" PRIu64 " \n", osal_timer_since_start ());
@@ -104,7 +105,7 @@ int main (void)
       spinwait (osal_timer_convert_ms_to_ns (250));
    }
    mark = osal_timer_mark_ns ();
-   printf ("\nLoop duration:  %" PRIu64 "uS (%.2fs)\n", mark, osal_timer_convert_ns_to_s (mark));
+   printf ("\nLoop duration:  %" PRIu64 "ns (%.2fs)\n", mark, osal_timer_convert_ns_to_s (mark));
    printf ("Mark at: %" PRIu64 " \n", osal_timer_since_start ());
 
    osal_timer_del (t1);

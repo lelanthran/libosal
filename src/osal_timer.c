@@ -70,7 +70,6 @@ typedef union _LARGE_INTEGER {
 } LARGE_INTEGER, *PLARGE_INTEGER;
  */
 
-// static const uint64_t num_ms_in_sec = 1000000ULL;
 static const uint64_t num_ns_in_sec = 1000000000ULL;
 static uint64_t start_counter = 0;
 
@@ -93,9 +92,10 @@ static uint64_t start_counter = 0;
 #endif
 
 #ifndef CLOCK_ID
-#define CLOCK_ID CLOCK_MONOTONIC_COARSE
+#define CLOCK_ID CLOCK_MONOTONIC
 #endif
 
+static int g_clock_id = CLOCK_ID;
 
 
 #ifdef OSTYPE_Darwin
@@ -132,11 +132,9 @@ static uint64_t get_time_now (void)
    struct timespec rt;
    uint64_t now;
 
-   if (clock_gettime (CLOCK_ID, &rt)!=0)
+   if (clock_gettime (g_clock_id, &rt)!=0)
       return (uint64_t)-1;
 
-   // now = rt.tv_sec * num_ms_in_sec;
-   // now += rt.tv_nsec / (uint64_t)1000;
    now = rt.tv_sec * num_ns_in_sec;
    now += rt.tv_nsec;
 
@@ -165,6 +163,7 @@ static uint64_t get_time_now (void)
       return (uint64_t)-1;
    }
 
+   // TODO: Fix this on Windows.
    retval = large_int_type.QuadPart / (ticks_per_sec / num_ms_in_sec);
 
    if (retval==(uint64_t)-1) {
@@ -178,8 +177,20 @@ static uint64_t get_time_now (void)
 uint64_t osal_timer_resolution (void)
 {
    struct timespec ts = { -1, -1 };
-   clock_getres(CLOCK_ID, &ts);
+   clock_getres (g_clock_id, &ts);
    return ts.tv_nsec;
+}
+
+bool osal_timer_setclock (enum osal_clock_t clk)
+{
+   // TODO: try to figure out how this will be ifdef'ed for Windows and Darwin.
+   switch (clk) {
+      case osal_clock_COARSE: g_clock_id = CLOCK_MONOTONIC_COARSE;   return true;
+      case osal_clock_PRECISE: g_clock_id = CLOCK_MONOTONIC;         return true;
+      case osal_clock_RAW: g_clock_id = CLOCK_MONOTONIC_RAW;         return true;
+   }
+
+   return false;
 }
 
 
