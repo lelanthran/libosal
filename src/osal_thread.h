@@ -72,9 +72,12 @@ extern "C" {
    // is undefined.
    void osal_mutex_del (osal_mutex_t *mutex);
 
-   // Acquire the mutex. While the mutex is acquired, other callers attempting to
-   // acquire the same mutex will block. Only one caller will ever hold the
-   // same mutex at the same time.
+   // Acquire the mutex without blocking. If the mutex is already held this
+   // call returns immediately.
+   //
+   // While the mutex is acquired, other callers attempting to acquire the same
+   // mutex will block. Only one caller will ever hold the same mutex at the same
+   // time.
    //
    // Returns true if the mute was acquired, false if it was not.
    bool osal_mutex_acquire (osal_mutex_t *mutex);
@@ -84,23 +87,23 @@ extern "C" {
    // Returns true if the mute was released, false if it was not.
    bool osal_mutex_release (osal_mutex_t *mutex);
 
+   // Perform atomic read and writes
+   uint64_t osal_atomic_load (volatile uint64_t *dst);
+   void osal_atomic_store (volatile uint64_t *dst, uint64_t value);
 
    // Use atomic compare and exchange for in-process mutex (mutex is not
    // in-process; it can and does cause kernel context switches).
    //
-   // Due to Win32 API restrictions only a 32-bit unsigned integer can be
-   // used as the mutex. This is not a problem as the mutex only has two
-   // states.
-   //
    // Might be a problem if this is used to create an in-process semaphore.
-   bool osal_cmpxchange (uint32_t *target, uint32_t newval, uint32_t compare);
+   bool osal_cmpxchange (volatile uint64_t *target,
+                         uint64_t newval, uint64_t comparand);
 
    // Acquire a fast mutex. A fast mutex is an in-process mutex that will
    // never cause a kernel context-switch. The target must be initialised
    // to zero before any acquisitions and releases are performed.
    //
    // Returns true if the fast mutex is acquired, false if it was not.
-   bool osal_ftex_acquire (uint32_t *target, const char *id);
+   bool osal_ftex_acquire (uint64_t *target, const char *id);
 
    // Release a fast mutex. A fast mutex is an in-process mutex that will
    // never cause a kernel context-switch. The target must be initialised
@@ -108,7 +111,7 @@ extern "C" {
    //
    // Returns true if the fast mutex was released, false if it is still
    // held.
-   bool osal_ftex_release (uint32_t *target, const char *id);
+   bool osal_ftex_release (uint64_t *target, const char *id);
 
 #ifdef __cplusplus
 };

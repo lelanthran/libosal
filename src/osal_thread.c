@@ -181,8 +181,25 @@ bool osal_mutex_release (osal_mutex_t *mutex)
    return false;
 }
 
-bool osal_cmpxchange (uint32_t *target, uint32_t newval, uint32_t comparand)
+uint64_t osal_atomic_load (volatile uint64_t *dst)
 {
+   // For Windows: InterlockedExchangeAnd64 (dst, 0xffffffffffffffff);
+   uint64_t ret;
+   __atomic_load (dst, &ret, __ATOMIC_ACQUIRE);
+   return ret;
+}
+
+void osal_atomic_store (volatile uint64_t *dst, uint64_t value)
+{
+   // For Windows: InterlockedExchangeAdd64 (dst, 0);
+   __atomic_store (dst, &value, __ATOMIC_RELEASE);
+}
+
+
+bool osal_cmpxchange (volatile uint64_t *target,
+                      uint64_t newval, uint64_t comparand)
+{
+   // For Windows: InterlockedCompareExchange64 (dst, newval, comparand);
    return __atomic_compare_exchange_n (target,
                                        &comparand,
                                        newval,
@@ -194,7 +211,7 @@ bool osal_cmpxchange (uint32_t *target, uint32_t newval, uint32_t comparand)
 #endif
 
 
-bool osal_ftex_acquire (uint32_t *target, const char *id)
+bool osal_ftex_acquire (uint64_t *target, const char *id)
 {
    (void)id;
    for (size_t i=0; i<5; i++) {
@@ -205,7 +222,7 @@ bool osal_ftex_acquire (uint32_t *target, const char *id)
    return false;
 }
 
-bool osal_ftex_release (uint32_t *target, const char *id)
+bool osal_ftex_release (uint64_t *target, const char *id)
 {
    (void)id;
    for (size_t i=0; i<5; i++) {

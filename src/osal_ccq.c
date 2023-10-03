@@ -137,7 +137,7 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
    ccq->array[ccq->index_insert].nq_time = now;
 
    // If the retrieval point is unset ((size_t)-1), then we must
-   // set it to the element we just inserted, which must be, by
+   // set it to the element we just inserted.
    if (ccq->index_retrieve == (size_t)-1) {
       ccq->index_retrieve = ccq->index_insert;
    }
@@ -148,7 +148,8 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
       ccq->index_insert = 0;
    }
 
-   // We are done. Now the retrieval will take of of some details.
+   // We are done. Now the retrieval will take care of the rest of
+   // the complexity.
 
    ret = true;
 cleanup:
