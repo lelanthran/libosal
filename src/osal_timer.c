@@ -80,7 +80,7 @@ static uint64_t start_counter = 0;
 #ifdef PLATFORM_POSIX
 
 #ifdef OSTYPE_Linux
-#define CLOCK_ID           CLOCK_MONOTONIC_RAW
+#define CLOCK_ID           CLOCK_MONOTONIC_COARSE
 #endif
 
 #ifdef OSTYPE_FreeBSD
@@ -92,7 +92,7 @@ static uint64_t start_counter = 0;
 #endif
 
 #ifndef CLOCK_ID
-#define CLOCK_ID CLOCK_MONOTONIC
+#define CLOCK_ID CLOCK_MONOTONIC_COARSE
 #endif
 
 static int g_clock_id = CLOCK_ID;
