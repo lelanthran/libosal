@@ -1,3 +1,8 @@
+/* ********************************************************
+ * Copyright ©2023 Lelanthran Manickum, All rights reserved
+ * This project  is licensed under the GPLv3.  See the file
+ * LICENSE for more information.
+ */
 
 #ifndef H_OSAL_CCQ
 #define H_OSAL_CCQ

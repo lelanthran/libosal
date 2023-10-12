@@ -1,3 +1,8 @@
+/* ********************************************************
+ * Copyright ©2023 Lelanthran Manickum, All rights reserved
+ * This project  is licensed under the GPLv3.  See the file
+ * LICENSE for more information.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
