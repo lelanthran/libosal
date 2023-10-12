@@ -298,10 +298,8 @@ real-help:
 
 
 real-all:	$(OUTDIRS) $(DYNLIB) $(STCLIB) $(BINPROGS)
-	@unlink ./recent/default-platform || rm -rf ./recent/default-platform
 	@unlink ./recent || rm -rf ./recent
-	@ln -s $(OUTDIR) ./recent
-	@ln -s ./$(TARGET) $(OUTDIR)/default-platform
+	@ln -s $(OUTDIR)/$(TARGET) ./recent
 
 all:	$(SWIG_WRAPPERS) real-all
 	@$(ECHO) "[$(CYAN)Soft linking$(NONE)]    [$(STCLNK_TARGET)]"
@@ -348,6 +346,8 @@ real-show:
 	@$(ECHO) "$(GREEN)LD_LIB$(NONE)           $(LD_LIB)"
 	@$(ECHO) "$(GREEN)LD_PROG$(NONE)          $(LD_PROG)"
 	@$(ECHO) "$(GREEN)LDFLAGS$(NONE)          $(LDFLAGS)"
+	@$(ECHO) "$(GREEN)REAL_EXTRA_LIB_LDFLAGS$(NONE)  $(REAL_EXTRA_LIB_LDFLAGS)"
+	@$(ECHO) "$(GREEN)REAL_EXTRA_PROG_LDFLAGS$(NONE)  $(REAL_EXTRA_PROG_LDFLAGS)"
 	@$(ECHO) "$(GREEN)LIBDIRS$(NONE)          $(LIBDIRS)"
 	@$(ECHO) "$(GREEN)AR$(NONE)               $(AR)"
 	@$(ECHO) "$(GREEN)ARFLAGS$(NONE)          $(ARFLAGS)"
