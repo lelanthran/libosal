@@ -42,21 +42,21 @@ extern "C" {
    // Initialise all the timer structures and values.
    void osal_timer_init (void);
 
-   // Returns the number of microseconds that have elapsed since this
+   // Returns the number of nanoseconds that have elapsed since this
    // function was last called. On the first invocation it returns
-   // the number of microseconds since osal_timer_init() was called.
+   // the number of nanoseconds since osal_timer_init() was called.
    // uint64_t osal_timer_mark_us (void);
    uint64_t osal_timer_mark_ns (void);
 
-   // Returns the number of microseconds since the program init().
+   // Returns the number of nanoseconds since the program init().
    uint64_t osal_timer_since_start (void);
 
    // Sets a timer for expiry in the future, in ns. The caller must
    // use osal_timer_expired() to determine if the timer has expired.
    // Use reset() for reusing an existing timer, or set() for
    // allocating a new timer
-   osal_timer_t *osal_timer_set (uint64_t micros);
-   bool osal_timer_reset (osal_timer_t *xt, uint64_t micros);
+   osal_timer_t *osal_timer_set (uint64_t nanos);
+   bool osal_timer_reset (osal_timer_t *xt, uint64_t nanos);
 
    // Check if a timer expired. Timer must have been set with
    // osal_timer_set() above.

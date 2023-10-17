@@ -35,7 +35,7 @@
 #endif
 
 struct osal_timer_t {
-   uint64_t tte_usecs;     // Time to expiry in microseconds
+   uint64_t tte_nsecs;     // Time to expiry in nanoseconds
 };
 
 
@@ -79,7 +79,7 @@ static const uint64_t num_ns_in_sec = 1000000000ULL;
 static uint64_t start_counter = 0;
 
 /* get_time_now() must be rewritten for each target platform. It must
- * return a timestamp in microseconds. This function must return -1
+ * return a timestamp in nanoseconds. This function must return -1
  * on error, so ensure that the return value is never -1 on success.
  */
 #ifdef PLATFORM_POSIX
@@ -205,19 +205,19 @@ void osal_timer_init (void)
    start_counter = get_time_now ();
 }
 
-osal_timer_t *osal_timer_set (uint64_t micros)
+osal_timer_t *osal_timer_set (uint64_t nanos)
 {
    osal_timer_t *ret = malloc (sizeof *ret);
    if (!ret)
       return NULL;
-   if (!(osal_timer_reset (ret, micros))) {
+   if (!(osal_timer_reset (ret, nanos))) {
       free (ret);
       return NULL;
    }
    return ret;
 }
 
-bool osal_timer_reset (osal_timer_t *xt, uint64_t micros)
+bool osal_timer_reset (osal_timer_t *xt, uint64_t nanos)
 {
    uint64_t now = get_time_now ();
    if (now == (uint64_t)-1)
@@ -228,7 +228,7 @@ bool osal_timer_reset (osal_timer_t *xt, uint64_t micros)
 
    memset (xt, 0, sizeof *xt);
 
-   xt->tte_usecs = now + micros;
+   xt->tte_nsecs = now + nanos;
 
    return true;
 }
@@ -243,7 +243,7 @@ bool osal_timer_expired (osal_timer_t *xt)
    if (!xt)
       return true;
 
-   if (now >= xt->tte_usecs)
+   if (now >= xt->tte_nsecs)
       return true;
    else
       return false;
