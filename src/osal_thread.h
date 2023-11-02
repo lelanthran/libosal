@@ -93,14 +93,14 @@ extern "C" {
    bool osal_mutex_release (osal_mutex_t *mutex);
 
    // Perform atomic read and writes
-   uint64_t osal_atomic_load (volatile uint64_t *dst);
-   void osal_atomic_store (volatile uint64_t *dst, uint64_t value);
+   uint64_t osal_atomic_load (uint64_t *dst);
+   void osal_atomic_store (uint64_t *dst, uint64_t value);
 
    // Use atomic compare and exchange for in-process mutex (mutex is not
    // in-process; it can and does cause kernel context switches).
    //
    // Might be a problem if this is used to create an in-process semaphore.
-   bool osal_cmpxchange (volatile uint64_t *target,
+   bool osal_cmpxchange (uint64_t *target,
                          uint64_t newval, uint64_t comparand);
 
    // Acquire a fast mutex. A fast mutex is an in-process mutex that will

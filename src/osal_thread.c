@@ -120,7 +120,7 @@ bool osal_thread_new (osal_thread_t *thandle, osal_thread_func_t *fptr, void *pa
    tr->fptr = fptr;
    tr->param = param;
 
-   return pthread_create(thandle, NULL, trunner, tr) == 0;
+   return pthread_create (thandle, NULL, trunner, tr) == 0;
 }
 
 bool osal_thread_wait (osal_thread_t *threads, size_t nthreads)
@@ -186,7 +186,7 @@ bool osal_mutex_release (osal_mutex_t *mutex)
    return false;
 }
 
-uint64_t osal_atomic_load (volatile uint64_t *dst)
+uint64_t osal_atomic_load (uint64_t *dst)
 {
    // For Windows: InterlockedExchangeAnd64 (dst, 0xffffffffffffffff);
    uint64_t ret;
@@ -194,14 +194,14 @@ uint64_t osal_atomic_load (volatile uint64_t *dst)
    return ret;
 }
 
-void osal_atomic_store (volatile uint64_t *dst, uint64_t value)
+void osal_atomic_store (uint64_t *dst, uint64_t value)
 {
    // For Windows: InterlockedExchangeAdd64 (dst, 0);
    __atomic_store (dst, &value, __ATOMIC_RELEASE);
 }
 
 
-bool osal_cmpxchange (volatile uint64_t *target,
+bool osal_cmpxchange (uint64_t *target,
                       uint64_t newval, uint64_t comparand)
 {
    // For Windows: InterlockedCompareExchange64 (dst, newval, comparand);
