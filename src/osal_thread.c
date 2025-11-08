@@ -115,7 +115,11 @@ bool osal_thread_new (osal_thread_t *thandle, osal_thread_func_t *fptr, void *pa
    tr->fptr = fptr;
    tr->param = param;
 
-   return pthread_create(thandle, NULL, trunner, tr) == 0;
+   bool ret = pthread_create (thandle, NULL, trunner, tr) == 0;
+   if (!ret) {
+      *thandle = -1; // TODO: Not portable!!!
+   }
+   return ret;
 }
 
 bool osal_thread_wait (osal_thread_t *threads, size_t nthreads)
@@ -211,7 +215,7 @@ bool osal_cmpxchange (volatile uint64_t *target,
 #endif
 
 
-bool osal_ftex_acquire (uint64_t *target, const char *id)
+bool osal_futex_acquire (uint64_t *target, const char *id)
 {
    (void)id;
    for (size_t i=0; i<5; i++) {
@@ -222,7 +226,7 @@ bool osal_ftex_acquire (uint64_t *target, const char *id)
    return false;
 }
 
-bool osal_ftex_release (uint64_t *target, const char *id)
+bool osal_futex_release (uint64_t *target, const char *id)
 {
    (void)id;
    for (size_t i=0; i<5; i++) {

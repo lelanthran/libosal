@@ -4,7 +4,7 @@
  *
  * As I don't like using any design even slightly complicated when it
  * comes to threads, the API provided is the bare minimum needed to
- * implement a multi-producer/mult-consumer queue.
+ * implement a multi-producer/multi-consumer queue.
  *
  * Such a pattern allows very high-confidence multi-threaded applications:
  *
@@ -14,13 +14,10 @@
  *  Each consumer waits on the queue, removes the next item, works with
  *  it, deletes it, and waits on the queue again.
  *
- * This really is a fearless concurrency pattern than can be used in
- * any language (not just over-hyped ones). There is no risk of races.
- *
- * Another pattern that this library is intended to support is pre-
- * created object pools. This allows large and expensive objects to all
- * be created once at program startup, stored in a pool and handed out
- * to any caller who needs a new object of that instance.
+ * Another pattern that this library is intended to eventually support
+ * is pre- created object pools. This allows large and expensive objects
+ * to all be created once at program startup, stored in a pool and
+ * handed out to any caller who needs a new object of that instance.
  *
  * This requires semaphore support, so I expect to implement the
  * wrappers for semaphores once I get to the point where I need the pool
@@ -79,7 +76,7 @@ extern "C" {
    // mutex will block. Only one caller will ever hold the same mutex at the same
    // time.
    //
-   // Returns true if the mute was acquired, false if it was not.
+   // Returns true if the mutex was acquired, false if it was not.
    bool osal_mutex_acquire (osal_mutex_t *mutex);
 
    // Release a mutex that was acquired.
@@ -103,7 +100,7 @@ extern "C" {
    // to zero before any acquisitions and releases are performed.
    //
    // Returns true if the fast mutex is acquired, false if it was not.
-   bool osal_ftex_acquire (uint64_t *target, const char *id);
+   bool osal_futex_acquire (uint64_t *target, const char *id);
 
    // Release a fast mutex. A fast mutex is an in-process mutex that will
    // never cause a kernel context-switch. The target must be initialised
@@ -111,7 +108,7 @@ extern "C" {
    //
    // Returns true if the fast mutex was released, false if it is still
    // held.
-   bool osal_ftex_release (uint64_t *target, const char *id);
+   bool osal_futex_release (uint64_t *target, const char *id);
 
 #ifdef __cplusplus
 };

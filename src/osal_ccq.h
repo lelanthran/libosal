@@ -29,7 +29,8 @@ extern "C" {
 
    /* Retrieves a message from the queue. Returns true on
     * success and false on any error. When there are no
-    * messages true is returned, and *dst nq_time NULL/0.
+    * messages true is returned, and {*dst, nq_time} is
+    * set to { NULL, 0}.
     *
     * The message is placed in dst, the time that the message
     * was added to the queue is placed in 'nq_time'. See

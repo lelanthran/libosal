@@ -9,10 +9,10 @@
 #include "osal_timer.h"
 
 // #undef USE_MUTEX
-// #define USE_FTEX 1
+// #define USE_FUTEX 1
 
 #define USE_MUTEX 1
-#undef USE_FTEX
+#undef USE_FUTEX
 
 struct message_t {
    void *message;
@@ -28,7 +28,7 @@ struct osal_ccq_t {
    osal_mutex_t mutex;
 #endif
 
-#ifdef USE_FTEX
+#ifdef USE_FUTEX
    uint32_t mutex;
 #endif
 };
@@ -41,7 +41,7 @@ void osal_ccq_dump (osal_ccq_t *ccq)
       return;
    }
 
-#ifdef USE_FTEX
+#ifdef USE_FUTEX
    fprintf (stdout, "register %" PRIu32 "\n", ccq->mutex);
 #endif
 
@@ -64,7 +64,7 @@ osal_ccq_t *osal_ccq_new (size_t nelements)
       goto cleanup;
    }
 #endif
-#ifdef USE_FTEX
+#ifdef USE_FUTEX
    ret->mutex = 0;
 #endif
 
@@ -111,8 +111,8 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
       goto cleanup;
    }
 #endif
-#ifdef USE_FTEX
-   if (!(osal_ftex_acquire (&ccq->mutex, "nq"))) {
+#ifdef USE_FUTEX
+   if (!(osal_futex_acquire (&ccq->mutex, "nq"))) {
       goto cleanup;
    }
 
@@ -165,9 +165,9 @@ cleanup:
          // osal_thread_sleep (1);
       }
 #endif
-#ifdef USE_FTEX
+#ifdef USE_FUTEX
       for (size_t i=0; i<1000; i++) {
-         if ((osal_ftex_release (&ccq->mutex, "nq")) == true) {
+         if ((osal_futex_release (&ccq->mutex, "nq")) == true) {
             released = true;
             break;
          }
@@ -185,6 +185,14 @@ bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
    bool ret = false;
    bool acquired = false;
 
+   if (dst) {
+      *dst = NULL;
+   }
+   if (nq_time) {
+      *nq_time = 0;
+   }
+
+
 #ifdef USE_MUTEX
    if (!(osal_mutex_acquire(&ccq->mutex))) {
       *dst = NULL;
@@ -192,8 +200,8 @@ bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
       goto cleanup;
    }
 #endif
-#ifdef USE_FTEX
-   if (!(osal_ftex_acquire (&ccq->mutex, "dq"))) {
+#ifdef USE_FUTEX
+   if (!(osal_futex_acquire (&ccq->mutex, "dq"))) {
       *dst = NULL;
       *nq_time = 0;
       goto cleanup;
@@ -243,9 +251,9 @@ cleanup:
          // osal_thread_sleep (1);
       }
 #endif
-#ifdef USE_FTEX
+#ifdef USE_FUTEX
       for (size_t i=0; i<1000; i++) {
-         if ((osal_ftex_release (&ccq->mutex, "dq")) == true) {
+         if ((osal_futex_release (&ccq->mutex, "dq")) == true) {
             released = true;
             break;
          }
@@ -267,8 +275,8 @@ size_t osal_ccq_count (osal_ccq_t *ccq)
       goto cleanup;
    }
 #endif
-#ifdef USE_FTEX
-   if (!(osal_ftex_acquire (&ccq->mutex, "dq"))) {
+#ifdef USE_FUTEX
+   if (!(osal_futex_acquire (&ccq->mutex, "dq"))) {
       goto cleanup;
    }
 #endif
@@ -288,9 +296,9 @@ cleanup:
          // osal_thread_sleep (1);
       }
 #endif
-#ifdef USE_FTEX
+#ifdef USE_FUTEX
       for (size_t i=0; i<1000; i++) {
-         if ((osal_ftex_release (&ccq->mutex, "dq")) == true) {
+         if ((osal_futex_release (&ccq->mutex, "dq")) == true) {
             released = true;
             break;
          }

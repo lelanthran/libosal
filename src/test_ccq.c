@@ -74,7 +74,7 @@ static void consumer (void *param)
 
    printf ("[consumer] Completed\n");
    printf ("[consumer] Total queue duration(us): %" PRIu64 "us\n", total_duration);
-   printf ("[consumer] Total queue duration(s): %.2fs\n", total_duration/1000000.0);
+   printf ("[consumer] Total queue duration(s): %.2fs\n", (double)total_duration/1000000.0);
    free (message);
 }
 
