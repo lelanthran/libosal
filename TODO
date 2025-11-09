@@ -1,3 +1,0 @@
-===================================================================
-Need to change Makefile to detect and set OSTYPE_ defines for
-conditional compilation on different OSes.

@@ -15,12 +15,12 @@
  * collision should shake the whole screen.
  *
  * In a chatbox, a good HTTP response can be handled locally and the results
- * returned, but a lookup failure should be handled at the top level so a
- * monitor program can alert the user.
+ * returned to the caller for display, but a lookup failure should be handled
+ * at the top level so a monitor program can alert the user.
  *
- * In a calendar application, a notification failure has to be handled both at
- * the point of failure _AND_ by notifying the user OOB of the usual comms
- * channel.
+ * In an IoT application, a sensor value must be sent to different (often
+ * sibling) subsystems, with some handling the value when it is within the
+ * expected range and others handling different thresholds being exceeded.
  *
  * The point is, if you're _GOING_ to have spaghetti code, it may as well be
  * in a spaghetti-framework. This is what an event bus is intended for.

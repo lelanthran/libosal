@@ -143,6 +143,7 @@ static struct handler_t *handlers_evt_find (uint64_t evt)
 static osal_ccq_t *g_ccq;
 static osal_thread_t *g_threads;
 static size_t g_nthreads;
+static size_t g_remaining_threads;
 
 
 

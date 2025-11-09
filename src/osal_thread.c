@@ -195,7 +195,7 @@ uint64_t osal_atomic_load (volatile uint64_t *dst)
 
 void osal_atomic_store (volatile uint64_t *dst, uint64_t value)
 {
-   // For Windows: InterlockedExchangeAdd64 (dst, 0);
+   // TODO: For Windows: InterlockedExchangeAdd64 (dst, 0);
    __atomic_store (dst, &value, __ATOMIC_RELEASE);
 }
 
@@ -203,7 +203,7 @@ void osal_atomic_store (volatile uint64_t *dst, uint64_t value)
 bool osal_cmpxchange (volatile uint64_t *target,
                       uint64_t newval, uint64_t comparand)
 {
-   // For Windows: InterlockedCompareExchange64 (dst, newval, comparand);
+   // TODO: For Windows: InterlockedCompareExchange64 (dst, newval, comparand);
    return __atomic_compare_exchange_n (target,
                                        &comparand,
                                        newval,
