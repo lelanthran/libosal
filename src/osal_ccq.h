@@ -48,7 +48,7 @@ extern "C" {
     * On a return of true, *dst will be NULL and nq_time
     * will be zero if there were no messages available.
     *
-    * on a return of true, *dst will point to the message
+    * On a return of true, *dst will point to the message
     * retrieved from the queue and nq_time will be
     * populated with the time that the message entered the
     * queue.

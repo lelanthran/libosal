@@ -94,6 +94,22 @@ bool osal_mutex_acquire (osal_mutex_t *mutex)
    return rc == WAIT_OBJECT_0;
 }
 
+bool osal_mutex_acquire_try (osal_mutex_t *mutex)
+{
+   return pthread_mutex_trylock (mutex);
+}
+
+bool osal_mutex_acquire_retry (osal_mutex_t *mutex, size_t retry,
+                                                    size_t interval_ms)
+{
+   for (size_t i=0; i<=retry; i++) {
+      if (osal_mutex_acquire_try (mutex))
+         return true;
+      osal_thread_sleep (interval_ms);
+   }
+   return false;
+}
+
 void osal_mutex_release (osal_mutex_t *mutex)
 {
    ReleaseMutex (*mutex);
@@ -150,6 +166,11 @@ void osal_thread_sleep (size_t micro_s)
    nanosleep (&tv, &rem);
 }
 
+osal_thread_t osal_thread_self (void)
+{
+   return pthread_self ();
+}
+
 void osal_thread_del (osal_thread_t *thandle)
 {
     (void)thandle;
@@ -165,7 +186,7 @@ void osal_mutex_del (osal_mutex_t *mutex)
    pthread_mutex_destroy (mutex);
 }
 
-bool osal_mutex_acquire (osal_mutex_t *mutex)
+bool osal_mutex_acquire_try (osal_mutex_t *mutex)
 {
    for (size_t i=0; i<5; i++) {
       if ((pthread_mutex_trylock (mutex)) == 0) {
@@ -197,6 +218,16 @@ void osal_atomic_store (volatile uint64_t *dst, uint64_t value)
 {
    // TODO: For Windows: InterlockedExchangeAdd64 (dst, 0);
    __atomic_store (dst, &value, __ATOMIC_RELEASE);
+}
+
+uint64_t osal_atomic_add (volatile uint64_t *dst, uint64_t operand)
+{
+   return __atomic_fetch_add (dst, operand, __ATOMIC_SEQ_CST);
+}
+
+uint64_t osal_atomic_sub (volatile uint64_t *dst, uint64_t operand)
+{
+   return __atomic_fetch_sub (dst, operand, __ATOMIC_SEQ_CST);
 }
 
 
@@ -237,3 +268,38 @@ bool osal_futex_release (uint64_t *target, const char *id)
    return false;
 }
 
+bool osal_semaphore_new (osal_semaphore_t *sem, unsigned int value)
+{
+   return sem_init (sem, 0, value) == 0;
+}
+
+void osal_semaphore_del (osal_semaphore_t *sem)
+{
+   sem_destroy (sem);
+}
+
+bool osal_semaphore_post (osal_semaphore_t *sem)
+{
+   return sem_post (sem) == 0;
+}
+
+bool osal_semaphore_wait (osal_semaphore_t *sem)
+{
+   return sem_wait (sem) == 0;
+}
+
+bool osal_semaphore_wait_try (osal_semaphore_t *sem)
+{
+   return sem_trywait (sem) == 0;
+}
+
+bool osal_semaphore_wait_retry (osal_semaphore_t *sem, size_t retry,
+                                                       size_t interval_ms)
+{
+   for (size_t i=0; i<=retry; i++) {
+      if (osal_semaphore_wait_try (sem))
+         return true;
+      osal_thread_sleep (interval_ms);
+   }
+   return false;
+}

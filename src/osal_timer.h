@@ -13,13 +13,13 @@ enum osal_clock_t {
 
 // Convenience macros to convert to/from nanoseconds
 #define osal_timer_convert_ns_to_s(x)\
-   (double)((double)x / 1000000000.0)
+   (double)((double)(x) / 1000000000.0)
 #define osal_timer_convert_ns_to_ms(x)\
-   (double)((double)x / 1000000.0)
+   (double)((double)(x) / 1000000.0)
 #define osal_timer_convert_s_to_ns(x)\
-   (uint64_t)((uint64_t)x * (uint64_t)1000000000ULL)
+   (uint64_t)((uint64_t)(x) * (uint64_t)1000000000ULL)
 #define osal_timer_convert_ms_to_ns(x)\
-   (uint64_t)((uint64_t)x * (uint64_t)1000000ULL)
+   (uint64_t)((uint64_t)(x) * (uint64_t)1000000ULL)
 
 #ifdef __cplusplus
 extern "C" {

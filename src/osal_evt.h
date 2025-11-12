@@ -85,6 +85,9 @@ extern "C" {
    // eventually be handled by the event handler.
    bool osal_evt_generate (uint64_t evt, void *payload);
 
+   // Return the number of events in the queue.
+   size_t osal_evt_queue_length (void);
+
 #ifdef __cplusplus
 };
 #endif

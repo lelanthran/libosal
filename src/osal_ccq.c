@@ -107,7 +107,7 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
    bool acquired = false;
 
 #ifdef USE_MUTEX
-   if (!(osal_mutex_acquire(&ccq->mutex))) {
+   if (!(osal_mutex_acquire_try(&ccq->mutex))) {
       goto cleanup;
    }
 #endif
@@ -194,7 +194,7 @@ bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
 
 
 #ifdef USE_MUTEX
-   if (!(osal_mutex_acquire(&ccq->mutex))) {
+   if (!(osal_mutex_acquire_try(&ccq->mutex))) {
       *dst = NULL;
       *nq_time = 0;
       goto cleanup;
@@ -271,7 +271,7 @@ size_t osal_ccq_count (osal_ccq_t *ccq)
    bool acquired = false;
 
 #ifdef USE_MUTEX
-   if (!(osal_mutex_acquire(&ccq->mutex))) {
+   if (!(osal_mutex_acquire_try(&ccq->mutex))) {
       goto cleanup;
    }
 #endif

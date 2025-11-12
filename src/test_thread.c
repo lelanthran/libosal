@@ -22,7 +22,7 @@ void thread_func (void *param)
 {
    size_t self = (size_t)((uintptr_t)param);
    for (size_t i=0; i<addloop; i++) {
-      while (!(osal_mutex_acquire (&mutex))) {
+      while (!(osal_mutex_acquire_try (&mutex))) {
          printf ("Failed to acquire mutex [%zu]:%zu\n", self, i);
          osal_thread_sleep (1); // milliseconds, slows things down.
       }

@@ -76,9 +76,10 @@ int64_t __atomic_sub_fetch(
 
 ### Visual Studio functions
 
-`#ifdef PLATFORM_Windows
+```
+#ifdef PLATFORM_Windows
     // This code path is executing against visual studio.
-#endif``
+#endif
 // --- Atomic Store ---
 // Atomically writes 'Exchange' to 'Destination'. Returns the ORIGINAL value.
 // Note: This function's return type is often the size of the operation (LONG64).
@@ -169,7 +170,31 @@ int64_t atomic_fetch_sub_explicit(
 
 ## Semaphores
 
-Would be nice at some point to have semaphores. Haven't needed it yet, so maybe better to wait until
-I need semaphores before adding them in. Last I checked, MacOS doesn't have POSIX semaphores (POSIX
-very stupidly made semaphores optional when standardising pthreads), so possibly extra work is
-required there.
+Need semaphores for proper `ccq_t`: currently losing queue items and not sure
+if the spinlocking is an issue.
+
+With semaphores, all doubt is removed.
+
+# Whole new redesign on the interface
+Maybe a whole new redesign is needed for the interface. Currently doing the
+lazy thing and typedefing the underlying semaphore/thread/mutex types.
+
+However, this is not really good; cannot use 2-phase commit to destroy/delete
+a mutex or semaphore. This results in eventually deleting a mutex which
+*might* be locked by a thread.  No point in having a safe wrapper if it is not
+safe.
+
+1. The `mutex_acquire()` call returns immediately. This results in the caller
+   needing to spinlock. Maybe make this `acquire_try()` that returns
+   immediately, `acquire_timed()` that returns after a minimum wait, and
+   `acquire()` which simply blocks indefinitely.
+2. Similar problem with semaphore usage - we want functions `wait_try()`,
+   `wait_timed()` and `wait()`.
+3. **No signals!** We cannot install signal handlers; this is a library and
+   should *never* modify the global environment. Even though installing a
+   signal handler and removing it when the library is being shutdown is
+   possible, it's still a modification to the global environment. *In theory*
+   installing a signal handler should not make a difference, but I would like
+   to avoid it if I can.
+
+

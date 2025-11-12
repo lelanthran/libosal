@@ -2,6 +2,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
+// #include <inttypes.h>
+// #include <stdio.h>
 
 #include "osal_ccq.h"
 #include "osal_evt.h"
@@ -143,7 +145,7 @@ static struct handler_t *handlers_evt_find (uint64_t evt)
 static osal_ccq_t *g_ccq;
 static osal_thread_t *g_threads;
 static size_t g_nthreads;
-static size_t g_remaining_threads;
+static volatile uint64_t g_complete;
 
 
 
@@ -160,42 +162,51 @@ struct event_t {
    void                    *payload;
 };
 
-void event_loop (void *param)
+static bool dq_retry (osal_ccq_t *ccq, size_t n, void **dst, uint64_t *nq_time)
+{
+   for (size_t i=0; i<n; i++) {
+      if ((osal_ccq_dq (ccq, dst, nq_time)) && *dst && *nq_time)
+         return true;
+      osal_thread_sleep (1);
+   }
+   return false;
+}
+
+static void event_loop (void *param)
 {
    (void)param; // We do not use the parameter
    struct event_t *evt = NULL;
    uint64_t nq_time = 0;
 
-   while ((osal_ccq_dq (g_ccq, (void **)&evt, &nq_time))) {
-      // No message + no nq_time == no message is available
-      if (!evt && !nq_time) {
-         osal_thread_sleep (1);
+   while (1) {
+      uint64_t complete = osal_atomic_load (&g_complete);
+      if (complete)
+         break;
+
+      if (!(dq_retry (g_ccq, 50, (void **)&evt, &nq_time))) {
          continue;
       }
-      // No message + nq_time == NULL message sent
-      if (!evt) {
-         break;
-      }
+
       evt->fptr (evt->evt_id, evt->payload, nq_time);
       free (evt);
    }
 
-   if (g_nthreads == 1) {
-      while ((osal_ccq_dq (g_ccq, (void **)&evt, &nq_time))) {
-         free (evt);
-         if (evt == NULL && nq_time == 0)
-            break;
+   while (1) {
+      if (!(dq_retry (g_ccq, 100, (void **)&evt, &nq_time))) {
+         break;
       }
+
+      evt->fptr (evt->evt_id, evt->payload, nq_time);
+      free (evt);
    }
+
 }
-
-
-
 
 
 bool osal_evt_startup (size_t nthreads, size_t qlength)
 {
    bool error = true;
+
    // If we have already initialised, return true
    if (g_ccq || g_nthreads || g_threads)
       return true;
@@ -214,6 +225,7 @@ bool osal_evt_startup (size_t nthreads, size_t qlength)
       g_threads[i] = -1;
    }
 
+   osal_atomic_store (&g_complete, 0);
    for (size_t i=0; i<g_nthreads; i++) {
       if (!(osal_thread_new (&g_threads[i], event_loop, NULL))) {
          goto cleanup;
@@ -240,12 +252,7 @@ void osal_evt_shutdown (void)
    // First acquire the lock
    lock_acquire (5000);
 
-   // Stop all the threads; fill the queue with g_nthreads NULLs, then wait,
-   // then delete all the thread objects.
-   for (size_t i=0; i < (g_nthreads + 1); i++) {
-      // Potential memleak here, if fewer than g_nthreads threads are active.
-      osal_ccq_nq (g_ccq, NULL);
-   }
+   osal_atomic_store (&g_complete, 1);
 
    osal_thread_wait (g_threads, g_nthreads);
 
@@ -303,6 +310,10 @@ bool osal_evt_generate (uint64_t evt, void *payload)
    return nmatches > 0 ? true : false;
 }
 
+size_t osal_evt_queue_length (void)
+{
+   return osal_ccq_count (g_ccq);
+}
 
 
 
