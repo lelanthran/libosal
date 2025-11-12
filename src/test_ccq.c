@@ -25,7 +25,7 @@ static char *lstrdup (const char *src)
 static void consumer (void *param)
 {
    osal_ccq_t *queue = param;
-   printf ("[consumer] Started\n");
+   printf ("[consumer]: Started\n");
    char *message = NULL;
    uint64_t nq_time = (uint64_t)-1;
    uint64_t prev_time = osal_timer_since_start();
@@ -73,8 +73,9 @@ static void consumer (void *param)
    }
 
    printf ("[consumer] Completed\n");
-   printf ("[consumer] Total queue duration(us): %" PRIu64 "us\n", total_duration);
-   printf ("[consumer] Total queue duration(s): %.2fs\n", (double)total_duration/1000000.0);
+   printf ("[consumer] Total queue duration(us): %" PRIu64 "ns\n", total_duration);
+   printf ("[consumer] Total queue duration(s): %.2fs\n",
+            osal_timer_convert_ns_to_s (total_duration));
    free (message);
 }
 
