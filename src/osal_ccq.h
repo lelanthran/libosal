@@ -57,7 +57,13 @@ extern "C" {
     * invalid.
     *
     */
-   bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time);
+
+   /* Non-blocking variant of _dq */
+   bool osal_ccq_dq_try (osal_ccq_t *ccq, void **dst, uint64_t *nq_time);
+
+   /* Retrying variant of _dq */
+   bool osal_ccq_dq_retry (osal_ccq_t *ccq, void **dst, uint64_t *nq_time,
+                           size_t retry, size_t interval_ms);
 
    /* Returns a count of elements in the queue */
    size_t osal_ccq_count (osal_ccq_t *ccq);

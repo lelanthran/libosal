@@ -9,26 +9,22 @@
 #include "osal_evt.h"
 #include "osal_thread.h"
 
-static uint64_t g_futex;
+static uint64_t g_fastlock;
 
 static bool lock_acquire (size_t timeout_ms)
 {
    for (size_t i=0; i<timeout_ms; i++) {
-      if (osal_futex_acquire (&g_futex, NULL))
+      if (osal_fastlock_acquire_try (&g_fastlock, NULL))
          return true;
       osal_thread_sleep (1);
    }
    return false;
 }
 
-static bool lock_release (size_t timeout_ms)
+static bool lock_release (void)
 {
-   for (size_t i=0; i<timeout_ms; i++) {
-      if (osal_futex_release (&g_futex, NULL))
-         return true;
-      osal_thread_sleep (1);
-   }
-   return false;
+   osal_fastlock_release (&g_fastlock, NULL);
+   return true;
 }
 
 
@@ -91,7 +87,7 @@ static bool handlers_add (uint64_t evt, osal_evt_handler_func_t *fptr)
 
    error = false;
 cleanup:
-   lock_release (500);
+   lock_release ();
    return !error;
 }
 
@@ -109,7 +105,7 @@ static bool handlers_remove (uint64_t evt, osal_evt_handler_func_t *fptr)
          g_handlers[i].fptr = NULL;
       }
    }
-   return lock_release (1000);
+   return lock_release ();
 }
 
 /* **************************************************************************
@@ -135,7 +131,7 @@ static struct handler_t *handlers_evt_find (uint64_t evt)
       }
    }
 
-   lock_release (500);
+   lock_release ();
    return ret;
 }
 
@@ -165,7 +161,7 @@ struct event_t {
 static bool dq_retry (osal_ccq_t *ccq, size_t n, void **dst, uint64_t *nq_time)
 {
    for (size_t i=0; i<n; i++) {
-      if ((osal_ccq_dq (ccq, dst, nq_time)) && *dst && *nq_time)
+      if ((osal_ccq_dq_try (ccq, dst, nq_time)) && *dst && *nq_time)
          return true;
       osal_thread_sleep (1);
    }
@@ -254,10 +250,10 @@ void osal_evt_shutdown (void)
 
    osal_atomic_store (&g_complete, 1);
 
-   osal_thread_wait (g_threads, g_nthreads);
+   size_t completed = 0;
 
-   for (size_t i=0; i<g_nthreads; i++) {
-      osal_thread_del (&g_threads[i]);
+   while ((completed = osal_thread_wait_retry (g_threads, g_nthreads, 10, 1000)) != g_nthreads) {
+      // TODO: How do we handle this without passing it to a caller?
    }
 
    free (g_handlers);
@@ -270,7 +266,7 @@ void osal_evt_shutdown (void)
 
    osal_ccq_del (g_ccq);
    g_ccq = NULL;
-   lock_release (10000);
+   lock_release ();
 }
 
 bool osal_evt_register (uint64_t evt, osal_evt_handler_func_t *fptr)

@@ -34,7 +34,7 @@ static void consumer (void *param)
    uint64_t total_duration = 0;
 
    while (true) {
-      if ((osal_ccq_dq (queue, (void **)&message, &nq_time)) == false) {
+      if ((osal_ccq_dq_retry (queue, (void **)&message, &nq_time, 1, 1)) == false) {
          fprintf (stderr, "dequeue failure\n");
          osal_thread_sleep(1);
          continue;
@@ -104,6 +104,7 @@ static void producer (void *param)
 int main (void)
 {
    int ret = EXIT_FAILURE;
+   size_t completed = 0;
    osal_thread_t threads[2] = {0, 0};
 
    osal_ccq_t *queue = NULL;
@@ -125,10 +126,13 @@ int main (void)
       goto cleanup;
    }
 
-
    ret = EXIT_SUCCESS;
 cleanup:
-   osal_thread_wait(threads, 2);
+   completed = osal_thread_wait_retry (threads, 2, 10, 1000);
+   if (completed != 2) {
+      fprintf (stderr, "Failed to complete all threads: %zu of 2 completed\n", completed);
+   }
+
    osal_ccq_del (queue);
    return ret;
 }

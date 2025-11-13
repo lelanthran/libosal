@@ -31,7 +31,7 @@
 #include <windows.h>
 typedef HANDLE osal_thread_t;
 typedef HANDLE osal_mutex_t;
-typedef HANDLE osal_sem_t;
+typedef HANDLE osal_semaphore_t;
 #else
 #include <pthread.h>
 #include <semaphore.h>
@@ -57,8 +57,23 @@ extern "C" {
                          void *param);
 
    // Wait for the specified threads to complete execution. Thread handles are
-   // specified as an array and nthreads specifies the length of the array
-   bool osal_thread_wait (osal_thread_t *threads, size_t nthreads);
+   // specified as an array and nthreads specifies the length of the array.
+   // Each thread handle is cleaned up if it completes successfully (hence
+   // there is no `osal_thread_del()` function.
+   //
+   // Threads are waited on in order, starting from the first thread in the
+   // array. If a thread fails to complete within the timeout specified with
+   // `retry` and `interval_ms`, this function stops waiting and returns.
+   //
+   // Returns the index of the first non-completed thread. If all threads
+   // completed, the return value will be equal to `nthreads`.
+   //
+   // Example:
+   //    size_t c = 0;
+   //    while ((c = osal_thread_wait_retry (&threads[c], nthreads, 10, 10)) != nthreads)
+   //       ;
+   size_t osal_thread_wait_retry (osal_thread_t *threads, size_t nthreads,
+                                  size_t retry, size_t interval_ms);
 
    // Causes the current thread to sleep for not less than the specified number of
    // milliseconds.
@@ -66,10 +81,6 @@ extern "C" {
 
    // Gets the thread id of the calling thread
    osal_thread_t osal_thread_self (void);
-
-   // Once a thread has completed (see `osal_thread_wait()` above), call this
-   // function to clean up all resources held by the thread.
-   void osal_thread_del (osal_thread_t *thandle);
 
 
 
@@ -85,12 +96,6 @@ extern "C" {
    // specified is currently acquired by a thread, the behaviour
    // is undefined.
    void osal_mutex_del (osal_mutex_t *mutex);
-
-   // Acquire the mutex with blocking. If the mutex is already held this
-   // call returns immediately.
-   //
-   // Returns true if the mutex was acquired, false if it was not.
-   bool osal_mutex_acquire (osal_mutex_t *mutex);
 
    // Attempt to acquire the mutex. If the mutex cannot be acquired false
    // is returned. If the mutex was acquired true is returned. This function
@@ -121,9 +126,10 @@ extern "C" {
    uint64_t osal_atomic_load (volatile uint64_t *dst);
    void osal_atomic_store (volatile uint64_t *dst, uint64_t value);
 
-   // Perform atomic additions and atomic subtractions. Returns the original
-   // value of `dst` (value prior to the operation). The operand is either
-   // added to or subtracted from `dst`, with the result stored in dst.
+   // Perform atomic additions and atomic subtractions. Returns the value
+   // before the operation (value prior to the operation). The operand is
+   // either added to or subtracted from `dst`, with the result stored in
+   // dst.
    uint64_t osal_atomic_add (volatile uint64_t *dst, uint64_t operand);
    uint64_t osal_atomic_sub (volatile uint64_t *dst, uint64_t operand);
 
@@ -138,7 +144,7 @@ extern "C" {
 
 
    /* ***********************************************************************
-    * Futex functions
+    * Fastlock functions
     */
 
    // Acquire a fast mutex. A fast mutex is an in-process mutex that will
@@ -146,15 +152,20 @@ extern "C" {
    // to zero before any acquisitions and releases are performed.
    //
    // Returns true if the fast mutex is acquired, false if it was not.
-   bool osal_futex_acquire (uint64_t *target, const char *id);
+   bool osal_fastlock_acquire_try (volatile uint64_t *target, const char *id);
+
+   // A wrapper around osal_fastlock_acquire_retry(). Will attempt to acquire
+   // fastlock `retry` times, delaying between each attempt using `interval_ms`
+   // multiplied by the attempt number.
+   //
+   // Returns true if the fast mutex is acquired, false if it was not.
+   bool osal_fastlock_acquire_retry (volatile uint64_t *target, const char *id,
+                                  size_t retry, size_t interval_ms);
 
    // Release a fast mutex. A fast mutex is an in-process mutex that will
    // never cause a kernel context-switch. The target must be initialised
    // to zero before any acquisitions and releases are performed.
-   //
-   // Returns true if the fast mutex was released, false if it is still
-   // held.
-   bool osal_futex_release (uint64_t *target, const char *id);
+   void osal_fastlock_release (volatile uint64_t *target, const char *id);
 
 
 
@@ -175,9 +186,6 @@ extern "C" {
 
    // These are the functions that wait for a positive semaphore count, then
    // decrement it and returns a true or false value.
-
-   // This function blocks until the semaphore reaches a positive count.
-   bool osal_semaphore_wait (osal_semaphore_t *sem);
 
    // This function does not block, and returns true if the semaphore was
    // positive and false if the semaphore is zero.

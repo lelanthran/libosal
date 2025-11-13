@@ -9,10 +9,10 @@
 #include "osal_timer.h"
 
 #undef USE_MUTEX
-#define USE_FUTEX 1
+#define USE_FASTLOCK 1
 
 // #define USE_MUTEX 1
-// #undef USE_FUTEX
+// #undef USE_FASTLOCK
 
 struct message_t {
    void *message;
@@ -24,24 +24,27 @@ struct osal_ccq_t {
    size_t array_len;
    size_t index_insert;
    size_t index_retrieve;
+
+   osal_semaphore_t semaphore;
+
 #ifdef USE_MUTEX
    osal_mutex_t mutex;
 #endif
 
-#ifdef USE_FUTEX
+#ifdef USE_FASTLOCK
    uint64_t mutex;
 #endif
 };
 
 
 #ifdef USE_MUTEX
-#  define ACQUIRE_LOCK(ptr)      (osal_mutex_acquire_try (ptr))
-#  define RELEASE_LOCK(ptr)      (osal_mutex_release (ptr))
+#  define ACQUIRE_LOCK(ptr,retry,interval)      (osal_mutex_acquire_retry (ptr,retry,interval))
+#  define RELEASE_LOCK(ptr)                     (osal_mutex_release (ptr))
 #endif
 
-#ifdef USE_FUTEX
-#  define ACQUIRE_LOCK(ptr)      (osal_futex_acquire (ptr, "nq"))
-#  define RELEASE_LOCK(ptr)      (osal_futex_release (ptr, "dq"))
+#ifdef USE_FASTLOCK
+#  define ACQUIRE_LOCK(ptr,retry,interval)      (osal_fastlock_acquire_try (ptr, "nq"))
+#  define RELEASE_LOCK(ptr)                     (osal_fastlock_release (ptr, "dq"), true)
 #endif
 
 
@@ -52,7 +55,7 @@ void osal_ccq_dump (osal_ccq_t *ccq)
       return;
    }
 
-#ifdef USE_FUTEX
+#ifdef USE_FASTLOCK
    fprintf (stdout, "register %" PRIu64 "\n", ccq->mutex);
 #endif
 
@@ -66,22 +69,22 @@ osal_ccq_t *osal_ccq_new (size_t nelements)
 {
    bool error = true;
    osal_ccq_t *ret = calloc (1, sizeof *ret);
-   if (!ret) {
+   if (!ret)
       goto cleanup;
-   }
+
+   if (!(osal_semaphore_new (&ret->semaphore, 0)))
+      goto cleanup;
 
 #ifdef USE_MUTEX
-   if (!(osal_mutex_new (&ret->mutex))) {
+   if (!(osal_mutex_new (&ret->mutex)))
       goto cleanup;
-   }
 #endif
-#ifdef USE_FUTEX
+#ifdef USE_FASTLOCK
    ret->mutex = 0;
 #endif
 
-   if (!(ret->array = malloc (sizeof *ret->array * nelements))) {
+   if (!(ret->array = malloc (sizeof *ret->array * nelements)))
       goto cleanup;
-   }
 
    ret->array_len = nelements;
    ret->index_retrieve = (size_t)-1;
@@ -102,6 +105,8 @@ void osal_ccq_del (osal_ccq_t *ccq)
    if (!ccq)
       return;
 
+   osal_semaphore_del (&ccq->semaphore);
+
 #ifdef USE_MUTEX
    osal_mutex_del (&ccq->mutex);
 #endif
@@ -117,20 +122,19 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
    uint64_t now = osal_timer_since_start();
    bool acquired = false;
 
-   if (!(ACQUIRE_LOCK(&ccq->mutex))) {
+   if (!(ACQUIRE_LOCK (&ccq->mutex, 2, 1)))
       goto cleanup;
-   }
 
    acquired = true;
+
    /* **************************************************************
     * Tricky!
     */
 
    // If the insertion point matches the retrieval point, the queue
-   // is full and so we have to bail.
-   if (ccq->index_insert == ccq->index_retrieve) {
+   // is full and so we have to bail
+   if (ccq->index_insert == ccq->index_retrieve)
       goto cleanup;
-   }
 
    // Insert the message (with the time) at the insertion point. We
    // need to do this because the retrieval point might be unset
@@ -169,10 +173,12 @@ cleanup:
       ret = ret && released;
    }
 
+   osal_semaphore_post (&ccq->semaphore);
    return ret;
 }
 
-bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
+static bool ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time,
+                    size_t retry, size_t interval_ms)
 {
    bool ret = false;
    bool acquired = false;
@@ -184,10 +190,13 @@ bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
       *nq_time = 0;
    }
 
-   if (!(ACQUIRE_LOCK(&ccq->mutex))) {
-      *dst = NULL;
-      *nq_time = 0;
-      goto cleanup;
+   if (!(osal_semaphore_wait_retry (&ccq->semaphore, retry, interval_ms)))
+      return true;
+
+   if (!(ACQUIRE_LOCK (&ccq->mutex, retry, interval_ms))) {
+      // Return the semaphore token we got, as we could not acquire the lock
+      osal_semaphore_post (&ccq->semaphore);
+      return true;
    }
 
    acquired = true;
@@ -236,12 +245,23 @@ cleanup:
    return ret;
 }
 
+bool osal_ccq_dq_try (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
+{
+   return ccq_dq (ccq, dst, nq_time, 1, 1);
+}
+
+bool osal_ccq_dq_retry (osal_ccq_t *ccq, void **dst, uint64_t *nq_time,
+                        size_t retry, size_t interval_ms)
+{
+   return ccq_dq (ccq, dst, nq_time, retry, interval_ms);
+}
+
 size_t osal_ccq_count (osal_ccq_t *ccq)
 {
    size_t ret = 0;
    bool acquired = false;
 
-   if (!(ACQUIRE_LOCK (&ccq->mutex))) {
+   if (!(ACQUIRE_LOCK (&ccq->mutex, 1, 1))) {
       goto cleanup;
    }
 

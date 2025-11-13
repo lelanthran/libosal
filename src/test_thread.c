@@ -24,7 +24,7 @@ void thread_func (void *param)
    for (size_t i=0; i<addloop; i++) {
       while (!(osal_mutex_acquire_try (&mutex))) {
          printf ("Failed to acquire mutex [%zu]:%zu\n", self, i);
-         osal_thread_sleep (1); // milliseconds, slows things down.
+         osal_thread_sleep (i * 2); // milliseconds, slows things down.
       }
       counter++;
       while (!(osal_mutex_release (&mutex))) {
@@ -39,6 +39,7 @@ void thread_func (void *param)
 int main (void)
 {
    int ret = EXIT_FAILURE;
+   size_t index = 0;
    static osal_thread_t threads[500];
 
    memset (threads, 0, sizeof threads);
@@ -57,7 +58,9 @@ int main (void)
       printf ("Created thread :%zu:%zu\n", (size_t)(threads[i]), i);
    }
 
-   if (!(osal_thread_wait (threads, sizeof threads/sizeof threads[0]))) {
+   size_t nthreads = sizeof threads/sizeof threads[0];
+   size_t completed = 0;
+   if ((completed = osal_thread_wait_retry (threads, nthreads, 10, 1000)) != nthreads) {
       printf ("One or more threads failed to signal\n");
    }
 
@@ -74,9 +77,8 @@ int main (void)
    ret = EXIT_SUCCESS;
 cleanup:
 
-   for (size_t i=0; i<sizeof threads/sizeof threads[0]; i++) {
-      osal_thread_wait (&threads[i], 1);
-      osal_thread_del (&threads[i]);
+   while (index != 1) {
+      index = osal_thread_wait_retry (threads, 1, 10, 1000);
    }
 
    osal_mutex_del (&mutex);

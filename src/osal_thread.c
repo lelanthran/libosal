@@ -36,6 +36,9 @@ static thread_return_t trunner (void *param)
 #endif
 }
 
+
+#define MAX_RETRY_DURATION_MS    (5000)
+
 /* ***************************************************** */
 
 #ifdef PLATFORM_Windows
@@ -55,7 +58,8 @@ bool osal_thread_new (osal_thread_t *thandle, osal_thread_func_t *fptr, void *pa
    return *thandle != 0;
 }
 
-bool osal_thread_wait (osal_thread_t *threads, size_t nthreads)
+size_t osal_thread_wait_retry (osal_thread_t *threads, size_t nthreads,
+                               size_t retry, size_t interval_ms)
 {
    bool rc = true;
    for (size_t i=0; i<nthreads; i++) {
@@ -72,10 +76,12 @@ void osal_thread_sleep (size_t milliseconds)
    Sleep (param);
 }
 
+#if 0
 void osal_thread_del (osal_thread_t *thandle)
 {
     CloseHandle (*thandle);
 }
+#endif
 
 bool osal_mutex_new (osal_mutex_t *mutex)
 {
@@ -88,15 +94,18 @@ void osal_mutex_del (osal_mutex_t *mutex)
    CloseHandle (*mutex);
 }
 
+#if 0
 bool osal_mutex_acquire (osal_mutex_t *mutex)
 {
    DWORD rc = WaitForSingleObject (*mutex, 1);
    return rc == WAIT_OBJECT_0;
 }
+#endif
 
 bool osal_mutex_acquire_try (osal_mutex_t *mutex)
 {
-   return pthread_mutex_trylock (mutex);
+   // TODO:
+   return false;
 }
 
 bool osal_mutex_acquire_retry (osal_mutex_t *mutex, size_t retry,
@@ -138,8 +147,11 @@ bool osal_thread_new (osal_thread_t *thandle, osal_thread_func_t *fptr, void *pa
    return ret;
 }
 
-bool osal_thread_wait (osal_thread_t *threads, size_t nthreads)
+size_t osal_thread_wait_retry (osal_thread_t *threads, size_t nthreads,
+                               size_t retry, size_t interval_ms)
 {
+   // TODO: Fix this to use try semantics, and to delete each thread
+   // that was completed.
    bool ret = true;
    for (size_t i=0; i< nthreads; i++) {
       if (threads[i] == (uint64_t)-1) {
@@ -156,12 +168,15 @@ bool osal_thread_wait (osal_thread_t *threads, size_t nthreads)
    return ret;
 }
 
-void osal_thread_sleep (size_t micro_s)
+void osal_thread_sleep (size_t ms)
 {
+   if (!ms)
+      return;
+
    struct timespec tv, rem;
 
-   tv.tv_sec = micro_s / 1000;
-   tv.tv_nsec = (micro_s % 1000) * 1000000;
+   tv.tv_sec = ms / 1000;
+   tv.tv_nsec = (ms % 1000) * 1000000;
 
    nanosleep (&tv, &rem);
 }
@@ -169,11 +184,6 @@ void osal_thread_sleep (size_t micro_s)
 osal_thread_t osal_thread_self (void)
 {
    return pthread_self ();
-}
-
-void osal_thread_del (osal_thread_t *thandle)
-{
-    (void)thandle;
 }
 
 bool osal_mutex_new (osal_mutex_t *mutex)
@@ -188,20 +198,28 @@ void osal_mutex_del (osal_mutex_t *mutex)
 
 bool osal_mutex_acquire_try (osal_mutex_t *mutex)
 {
-   for (size_t i=0; i<5; i++) {
-      if ((pthread_mutex_trylock (mutex)) == 0) {
+   return pthread_mutex_trylock (mutex);
+}
+
+bool osal_mutex_acquire_retry (osal_mutex_t *mutex, size_t retry,
+                                                    size_t interval_ms)
+{
+   size_t duration = interval_ms;
+   for (size_t i=0; i<=retry; i++) {
+      if (osal_mutex_acquire_try (mutex))
          return true;
-      }
+      duration = (i + 1) * interval_ms;
+      if (duration > MAX_RETRY_DURATION_MS)
+         duration = MAX_RETRY_DURATION_MS;
+      osal_thread_sleep (duration);
    }
    return false;
 }
 
 bool osal_mutex_release (osal_mutex_t *mutex)
 {
-   for (size_t i=0; i<5; i++) {
-      if ((pthread_mutex_unlock (mutex)) == 0) {
-         return true;
-      }
+   if ((pthread_mutex_unlock (mutex)) == 0) {
+      return true;
    }
    return false;
 }
@@ -246,26 +264,35 @@ bool osal_cmpxchange (volatile uint64_t *target,
 #endif
 
 
-bool osal_futex_acquire (uint64_t *target, const char *id)
+bool osal_fastlock_acquire_try (volatile uint64_t *target, const char *id)
 {
    (void)id;
-   for (size_t i=0; i<5; i++) {
-      if (osal_cmpxchange (target, 1, 0)) {
-         return true;
-      }
+   if (osal_cmpxchange (target, 1, 0)) {
+      return true;
    }
    return false;
 }
 
-bool osal_futex_release (uint64_t *target, const char *id)
+bool osal_fastlock_acquire_retry (volatile uint64_t *target, const char *id,
+                               size_t retry, size_t interval_ms)
 {
    (void)id;
-   for (size_t i=0; i<5; i++) {
-      if (osal_cmpxchange (target, 0, 1)) {
+   size_t duration = interval_ms;
+   for (size_t i=0; i<retry; i++) {
+      if ((osal_cmpxchange (target, 1, 0)))
          return true;
-      }
+      duration = (i + 1) * interval_ms;
+      if (duration > MAX_RETRY_DURATION_MS)
+         duration = MAX_RETRY_DURATION_MS;
+      osal_thread_sleep (duration);
    }
    return false;
+}
+
+void osal_fastlock_release (volatile uint64_t *target, const char *id)
+{
+    (void)id;
+    osal_atomic_store (target, 0);
 }
 
 bool osal_semaphore_new (osal_semaphore_t *sem, unsigned int value)
@@ -283,11 +310,6 @@ bool osal_semaphore_post (osal_semaphore_t *sem)
    return sem_post (sem) == 0;
 }
 
-bool osal_semaphore_wait (osal_semaphore_t *sem)
-{
-   return sem_wait (sem) == 0;
-}
-
 bool osal_semaphore_wait_try (osal_semaphore_t *sem)
 {
    return sem_trywait (sem) == 0;
@@ -296,10 +318,14 @@ bool osal_semaphore_wait_try (osal_semaphore_t *sem)
 bool osal_semaphore_wait_retry (osal_semaphore_t *sem, size_t retry,
                                                        size_t interval_ms)
 {
+   size_t duration = interval_ms;
    for (size_t i=0; i<=retry; i++) {
       if (osal_semaphore_wait_try (sem))
          return true;
-      osal_thread_sleep (interval_ms);
+      duration = (i + 1) * interval_ms;
+      if (duration > MAX_RETRY_DURATION_MS)
+         duration = MAX_RETRY_DURATION_MS;
+      osal_thread_sleep (duration);
    }
    return false;
 }
