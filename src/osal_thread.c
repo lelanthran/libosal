@@ -147,25 +147,38 @@ bool osal_thread_new (osal_thread_t *thandle, osal_thread_func_t *fptr, void *pa
    return ret;
 }
 
+static void thread_del (osal_thread_t *thread)
+{
+   (void)thread;
+}
+
+static bool thread_wait_retry (osal_thread_t *thread, size_t retry, size_t interval_ms)
+{
+   size_t duration = interval_ms;
+   for (size_t i=0; i<retry; i++) {
+      if ((pthread_join (*thread, NULL)) == 0) {
+         thread_del (thread);
+         return true;
+      }
+
+      duration = (i + 1) * interval_ms;
+      if (duration > MAX_RETRY_DURATION_MS)
+         duration = MAX_RETRY_DURATION_MS;
+      osal_thread_sleep (duration);
+   }
+   return false;
+}
+
 size_t osal_thread_wait_retry (osal_thread_t *threads, size_t nthreads,
                                size_t retry, size_t interval_ms)
 {
    // TODO: Fix this to use try semantics, and to delete each thread
    // that was completed.
-   bool ret = true;
-   for (size_t i=0; i< nthreads; i++) {
-      if (threads[i] == (uint64_t)-1) {
-         continue;
-      }
-
-      int rc = pthread_join (threads[i], NULL);
-      if (rc == 0) {
-         threads[i] = (uint64_t)-1;
-      }
-
-      ret = ret && rc==0;
+   for (size_t i=0; i < nthreads; i++) {
+      if (!(thread_wait_retry (&threads[i], retry, interval_ms)))
+         return i;
    }
-   return ret;
+   return nthreads;
 }
 
 void osal_thread_sleep (size_t ms)

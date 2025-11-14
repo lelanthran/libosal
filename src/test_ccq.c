@@ -34,7 +34,7 @@ static void consumer (void *param)
    uint64_t total_duration = 0;
 
    while (true) {
-      if ((osal_ccq_dq_retry (queue, (void **)&message, &nq_time, 1, 1)) == false) {
+      if ((osal_ccq_dq_retry (queue, (void **)&message, &nq_time, 10, 100)) == false) {
          fprintf (stderr, "dequeue failure\n");
          osal_thread_sleep(1);
          continue;

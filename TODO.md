@@ -184,17 +184,3 @@ a mutex or semaphore. This results in eventually deleting a mutex which
 *might* be locked by a thread.  No point in having a safe wrapper if it is not
 safe.
 
-1. The `mutex_acquire()` call returns immediately. This results in the caller
-   needing to spinlock. Maybe make this `acquire_try()` that returns
-   immediately, `acquire_timed()` that returns after a minimum wait, and
-   `acquire()` which simply blocks indefinitely.
-2. Similar problem with semaphore usage - we want functions `wait_try()`,
-   `wait_timed()` and `wait()`.
-3. **No signals!** We cannot install signal handlers; this is a library and
-   should *never* modify the global environment. Even though installing a
-   signal handler and removing it when the library is being shutdown is
-   possible, it's still a modification to the global environment. *In theory*
-   installing a signal handler should not make a difference, but I would like
-   to avoid it if I can.
-
-
