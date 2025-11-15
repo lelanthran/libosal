@@ -207,14 +207,14 @@ static void event_loop (void *param)
 {
    (void)param; // We do not use the parameter
    struct event_t *evt = NULL;
-   uint64_t nq_time = 0;
+   uint64_t nq_time_us = 0;
 
    while (1) {
       uint64_t complete = osal_atomic_load (&g_complete);
       if (complete)
          break;
 
-      if (!(osal_ccq_dq_retry (g_ccq, (void **)&evt, &nq_time, 5, 10))) {
+      if (!(osal_ccq_dq_retry (g_ccq, (void **)&evt, &nq_time_us, 5, 10))) {
          continue;
       }
       if (!evt)
@@ -222,7 +222,7 @@ static void event_loop (void *param)
 
       struct handler_ll_t *first = evt->handlers;
       while (first) {
-         first->handler_fptr (evt->evt_id, evt->payload, nq_time);
+         first->handler_fptr (evt->evt_id, evt->payload, nq_time_us);
          first = first->next;
       }
       if (evt->free_fptr) {
@@ -233,10 +233,10 @@ static void event_loop (void *param)
    }
 
    while (1) {
-      if (!(osal_ccq_dq_retry (g_ccq, (void **)&evt, &nq_time, 5, 10))) {
+      if (!(osal_ccq_dq_retry (g_ccq, (void **)&evt, &nq_time_us, 5, 10))) {
          break;
       }
-      if (!evt && !nq_time)
+      if (!evt && !nq_time_us)
          break;
 
       if (!evt)
@@ -244,7 +244,7 @@ static void event_loop (void *param)
 
       struct handler_ll_t *first = evt->handlers;
       while (first) {
-         first->handler_fptr (evt->evt_id, evt->payload, nq_time);
+         first->handler_fptr (evt->evt_id, evt->payload, nq_time_us);
          first = first->next;
       }
       if (evt->free_fptr) {

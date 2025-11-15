@@ -16,7 +16,7 @@
 
 struct message_t {
    void *message;
-   uint64_t nq_time;
+   uint64_t nq_time_us;
 };
 
 struct osal_ccq_t {
@@ -141,7 +141,7 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
    // ((size_t)-1), and it *can* be that even when the insertion point
    // is non-zero (queue empties faster than filling).
    ccq->array[ccq->index_insert].message = message;
-   ccq->array[ccq->index_insert].nq_time = now;
+   ccq->array[ccq->index_insert].nq_time_us = now;
 
    // If the retrieval point is unset ((size_t)-1), then we must
    // set it to the element we just inserted.
@@ -178,7 +178,7 @@ cleanup:
    return ret;
 }
 
-static bool ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time,
+static bool ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time_us,
                     size_t retry, size_t interval_ms)
 {
    bool ret = false;
@@ -187,8 +187,8 @@ static bool ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time,
    if (dst) {
       *dst = NULL;
    }
-   if (nq_time) {
-      *nq_time = 0;
+   if (nq_time_us) {
+      *nq_time_us = 0;
    }
 
    if (!(osal_semaphore_wait_retry (&ccq->semaphore, retry, interval_ms)))
@@ -214,8 +214,8 @@ static bool ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time,
 
    // Populate the outbound parameters
    *dst = ccq->array[ccq->index_retrieve].message;
-   if (nq_time) {
-      *nq_time = ccq->array[ccq->index_retrieve].nq_time;
+   if (nq_time_us) {
+      *nq_time_us = ccq->array[ccq->index_retrieve].nq_time_us;
    }
 
    // Increment the retrieval point. There are two possibilities
@@ -246,15 +246,15 @@ cleanup:
    return ret;
 }
 
-bool osal_ccq_dq_try (osal_ccq_t *ccq, void **dst, uint64_t *nq_time)
+bool osal_ccq_dq_try (osal_ccq_t *ccq, void **dst, uint64_t *nq_time_us)
 {
-   return ccq_dq (ccq, dst, nq_time, 1, 1);
+   return ccq_dq (ccq, dst, nq_time_us, 1, 1);
 }
 
-bool osal_ccq_dq_retry (osal_ccq_t *ccq, void **dst, uint64_t *nq_time,
+bool osal_ccq_dq_retry (osal_ccq_t *ccq, void **dst, uint64_t *nq_time_us,
                         size_t retry, size_t interval_ms)
 {
-   return ccq_dq (ccq, dst, nq_time, retry, interval_ms);
+   return ccq_dq (ccq, dst, nq_time_us, retry, interval_ms);
 }
 
 size_t osal_ccq_count (osal_ccq_t *ccq)

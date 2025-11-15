@@ -27,14 +27,14 @@ static void consumer (void *param)
    osal_ccq_t *queue = param;
    printf ("[consumer]: Started\n");
    char *message = NULL;
-   uint64_t nq_time = (uint64_t)-1;
+   uint64_t nq_time_us = (uint64_t)-1;
    uint64_t prev_time = osal_timer_since_start();
    size_t expected = 0;
    size_t msg_number = (size_t)-1;
    uint64_t total_duration = 0;
 
    while (true) {
-      if ((osal_ccq_dq_retry (queue, (void **)&message, &nq_time, 10, 100)) == false) {
+      if ((osal_ccq_dq_retry (queue, (void **)&message, &nq_time_us, 10, 100)) == false) {
          fprintf (stderr, "dequeue failure\n");
          osal_thread_sleep_ms (1);
          continue;
@@ -53,7 +53,7 @@ static void consumer (void *param)
       }
 
 
-      uint64_t duration = nq_time - prev_time;
+      uint64_t duration = nq_time_us - prev_time;
       total_duration += duration;
       if ((sscanf (message, "%zu", &msg_number)) != 1) {
          fprintf (stderr, "[consumer] Missing message number [%s]\n", message);
@@ -65,7 +65,7 @@ static void consumer (void *param)
          break;
       }
 
-      prev_time = nq_time;
+      prev_time = nq_time_us;
       free (message);
       message = NULL;
 

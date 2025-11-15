@@ -30,15 +30,15 @@ static void free_payload (void *payload)
    free (payload);
 }
 
-static void event_handler (uint64_t evt, void *payload, uint64_t nq_time)
+static void event_handler (uint64_t evt, void *payload, uint64_t nq_time_us)
 {
    static uint64_t prev = 0;
-   uint64_t tmp = nq_time - prev;
+   uint64_t tmp = nq_time_us - prev;
    double delta = osal_timer_convert_ns_to_ms (tmp);
    if (!prev) {
       delta = 0.0;
    }
-   prev = nq_time;
+   prev = nq_time_us;
 
    osal_atomic_add (&g_handled, 1);
 
