@@ -334,6 +334,9 @@ void osal_evt_shutdown (void)
 bool osal_evt_register_free (uint64_t evt, osal_evt_free_func_t *free_fptr)
 {
    bool ret = false;
+   uint64_t complete = osal_atomic_load (&g_complete);
+   if (complete)
+      return false;
 
    lock_acquire (500);
 
@@ -352,17 +355,27 @@ bool osal_evt_register_free (uint64_t evt, osal_evt_free_func_t *free_fptr)
 
 bool osal_register_handler (uint64_t evt, osal_evt_handler_func_t *handler_fptr)
 {
+   uint64_t complete = osal_atomic_load (&g_complete);
+   if (complete)
+      return false;
    return handlers_add (evt, handler_fptr);
 }
 
 bool osal_evt_deregister (uint64_t evt, osal_evt_handler_func_t *fptr)
 {
+   uint64_t complete = osal_atomic_load (&g_complete);
+   if (complete)
+      return false;
    return handlers_remove (evt, fptr);
 }
 
 bool osal_evt_generate (uint64_t evt, void *payload)
 {
    bool ret = false;
+   uint64_t complete = osal_atomic_load (&g_complete);
+   if (complete)
+      return false;
+
    while (!(lock_acquire (50)))
       ;
    for (size_t i=0; i < g_nhandlers; i++) {
