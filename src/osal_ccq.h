@@ -22,23 +22,51 @@ extern "C" {
    void osal_ccq_del (osal_ccq_t *ccq);
 
    /* Place a message onto the queue, returns true on success and
-    * false on error.
+    * false on error. The only error possible is failure to
+    * lock.
     */
    bool osal_ccq_nq (osal_ccq_t *ccq, void *message);
 
    /* Retrieves a message from the queue. Returns true on
-    * success and false if there are no messages. Errors are
-    * not possible.
+    * success and false on any error. When there are no
+    * messages true is returned, and {*dst, nq_time_us} is
+    * set to { NULL, 0}.
     *
     * The message is placed in dst, the time that the message
-    * was added to the queue is placed in 'nq_time'. See
+    * was added to the queue is placed in 'nq_time_us'. See
     * osal_timer_since_start() for more information on the
     * time value that is returned.
     *
-    * If nq_time is NULL, it is ignored. The parameter dst
+    * If nq_time_us is NULL, it is ignored. The parameter dst
     * must point to a valid pointer.
+    *
+    * Returns false if any errors are encountered, true if
+    * no errors were encountered. A return value of true does
+    * not indicate that a message was retrieved (the queue
+    * may be empty).
+    *
+    * On a return of true, *dst will be NULL and nq_time_us
+    * will be zero if there were no messages available.
+    *
+    * On a return of true, *dst will point to the message
+    * retrieved from the queue and nq_time_us will be
+    * populated with the time that the message entered the
+    * queue.
+    *
+    * On a return of false, both *dst and nq_time_us are
+    * invalid.
+    *
     */
-   bool osal_ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time);
+
+   /* Non-blocking variant of _dq */
+   bool osal_ccq_dq_try (osal_ccq_t *ccq, void **dst, uint64_t *nq_time_us);
+
+   /* Retrying variant of _dq */
+   bool osal_ccq_dq_retry (osal_ccq_t *ccq, void **dst, uint64_t *nq_time_us,
+                           size_t retry, size_t interval_ms);
+
+   /* Returns a count of elements in the queue */
+   size_t osal_ccq_count (osal_ccq_t *ccq);
 
 #ifdef __cplusplus
 };

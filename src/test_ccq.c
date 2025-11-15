@@ -20,29 +20,40 @@ static char *lstrdup (const char *src)
    return ret;
 }
 
+#define END_MESSAGE        ("quit")
+
 static void consumer (void *param)
 {
    osal_ccq_t *queue = param;
-   printf ("[consumer] Started\n");
+   printf ("[consumer]: Started\n");
    char *message = NULL;
-   uint64_t nq_time = (uint64_t)-1;
+   uint64_t nq_time_us = (uint64_t)-1;
    uint64_t prev_time = osal_timer_since_start();
    size_t expected = 0;
    size_t msg_number = (size_t)-1;
    uint64_t total_duration = 0;
 
    while (true) {
-      if ((osal_ccq_dq (queue, (void **)&message, &nq_time)) == false) {
-         osal_thread_sleep(1);
+      if ((osal_ccq_dq_retry (queue, (void **)&message, &nq_time_us, 10, 100)) == false) {
+         fprintf (stderr, "dequeue failure\n");
+         osal_thread_sleep_ms (1);
          continue;
       }
 
-      // End the thread if NULL is returned.
+      // No messages were rxed, continue
       if (message == NULL) {
+         osal_thread_sleep_ms (1);
+         continue;
+      }
+
+      // If message is "quit" then end the loop
+      if ((strcmp (message, END_MESSAGE)) == 0) {
+         message = NULL;
          break;
       }
 
-      uint64_t duration = nq_time - prev_time;
+
+      uint64_t duration = nq_time_us - prev_time;
       total_duration += duration;
       if ((sscanf (message, "%zu", &msg_number)) != 1) {
          fprintf (stderr, "[consumer] Missing message number [%s]\n", message);
@@ -54,7 +65,7 @@ static void consumer (void *param)
          break;
       }
 
-      prev_time = nq_time;
+      prev_time = nq_time_us;
       free (message);
       message = NULL;
 
@@ -62,8 +73,9 @@ static void consumer (void *param)
    }
 
    printf ("[consumer] Completed\n");
-   printf ("[consumer] Total queue duration(us): %" PRIu64 "us\n", total_duration);
-   printf ("[consumer] Total queue duration(s): %.2fs\n", total_duration/1000000.0);
+   printf ("[consumer] Total queue duration(us): %" PRIu64 "ns\n", total_duration);
+   printf ("[consumer] Total queue duration(s): %.2fs\n",
+            osal_timer_convert_ns_to_s (total_duration));
    free (message);
 }
 
@@ -76,12 +88,13 @@ static void producer (void *param)
       snprintf (message, sizeof message, "%zu message", i);
       char *msg = lstrdup (message);
       while (!(osal_ccq_nq (queue, msg))) {
-         osal_thread_sleep(1);
+         // fprintf (stderr, "enqueue failure [%s]\n", msg);
+         osal_thread_sleep_ms (1);
       }
    }
 
-   while (!(osal_ccq_nq (queue, NULL))) {
-      osal_thread_sleep (1);
+   while (!(osal_ccq_nq (queue, END_MESSAGE))) {
+      osal_thread_sleep_ms (1);
    }
 
    printf ("[producer]: Completed\n");
@@ -91,6 +104,7 @@ static void producer (void *param)
 int main (void)
 {
    int ret = EXIT_FAILURE;
+   size_t completed = 0;
    osal_thread_t threads[2] = {0, 0};
 
    osal_ccq_t *queue = NULL;
@@ -112,10 +126,13 @@ int main (void)
       goto cleanup;
    }
 
-
    ret = EXIT_SUCCESS;
 cleanup:
-   osal_thread_wait(threads, 2);
+   completed = osal_thread_wait_retry (threads, 2, 10, 1000);
+   if (completed != 2) {
+      fprintf (stderr, "Failed to complete all threads: %zu of 2 completed\n", completed);
+   }
+
    osal_ccq_del (queue);
    return ret;
 }
