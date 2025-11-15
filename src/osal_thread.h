@@ -77,7 +77,7 @@ extern "C" {
 
    // Causes the current thread to sleep for not less than the specified number of
    // milliseconds.
-   void osal_thread_sleep (size_t milliseconds);
+   void osal_thread_sleep_ms (size_t milliseconds);
 
    // Gets the thread id of the calling thread
    osal_thread_t osal_thread_self (void);
@@ -160,7 +160,7 @@ extern "C" {
    //
    // Returns true if the fast mutex is acquired, false if it was not.
    bool osal_fastlock_acquire_retry (volatile uint64_t *target, const char *id,
-                                  size_t retry, size_t interval_ms);
+                                     size_t retry, size_t interval_ms);
 
    // Release a fast mutex. A fast mutex is an in-process mutex that will
    // never cause a kernel context-switch. The target must be initialised

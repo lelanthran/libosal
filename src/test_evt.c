@@ -22,10 +22,15 @@ static char *lstrdup (const char *src)
 }
 
 
-static size_t g_handled = 0;
+static volatile uint64_t g_handled = 0;
 static size_t g_generated = 0;
 
-void event_handler (uint64_t evt, void *payload, uint64_t nq_time)
+static void free_payload (void *payload)
+{
+   free (payload);
+}
+
+static void event_handler (uint64_t evt, void *payload, uint64_t nq_time)
 {
    static uint64_t prev = 0;
    uint64_t tmp = nq_time - prev;
@@ -35,12 +40,12 @@ void event_handler (uint64_t evt, void *payload, uint64_t nq_time)
    }
    prev = nq_time;
 
-   g_handled++;
-   // osal_thread_sleep (20);
+   osal_atomic_add (&g_handled, 1);
+
    size_t tid = (size_t)osal_thread_self ();
    if (evt >= 1) {
       printf ("Thread: %zu: Event %" PRIu64 ": [%s]: %fms\n", tid, evt, (const char *)payload, delta);
-      free (payload);
+      // free (payload); // Handled by register_free
       return;
    }
    printf ("Unknown event %" PRIu64 "\n", evt);
@@ -52,6 +57,8 @@ int main (void)
 
    osal_timer_init ();
 
+   osal_timer_mark_ns ();
+
    uint64_t sub_start = osal_timer_mark_ns ();
    // Start 30 threads with a 1M queue length
    if (!(osal_evt_startup (30, 1024 * 1024))) {
@@ -62,8 +69,10 @@ int main (void)
    printf ("Timer: Event bus started in %fms\n", osal_timer_convert_ns_to_ms (sub_end - sub_start));
 
    for (uint8_t i=1; i<=10; i++) {
-      bool registered = osal_evt_register (i, event_handler);
-      printf ("Registered %" PRIi8 ": %s\n", i, registered ? "true" : "false");
+      bool reg_handler = osal_register_handler (i, event_handler);
+      bool reg_free = osal_evt_register_free (i, free_payload);
+      printf ("Registered handler %" PRIi8 ": %s\n", i, reg_handler ? "true" : "false");
+      printf ("Registered freefunc %" PRIi8 ": %s\n", i, reg_free ? "true" : "false");
    }
 
    sub_start = osal_timer_mark_ns ();
@@ -72,7 +81,7 @@ int main (void)
       snprintf (tmp, sizeof tmp, "Message 1: 0x%04" PRIx8, i);
       char *payload = lstrdup (tmp);
       bool generated = osal_evt_generate (i, payload);
-      // printf ("generated [%s]: %s\n", payload, generated ? "true" : "false");
+      printf ("generated [%s]: %s\n", payload, generated ? "true" : "false");
       if (!generated) {
          free (payload);
       } else {
@@ -92,11 +101,11 @@ int main (void)
 
    sub_start = osal_timer_mark_ns ();
    for (uint32_t i=1; i<(1024 * 1024); i++) {
-      char tmp[] = "Message 1: 0xXXXXXXXX--";
-      snprintf (tmp, sizeof tmp, "Message 2: 0x%08" PRIx16, (i % 10));
+      char tmp[] = "1234567890: Message 2: 0xXXXXXXXX--";
+      snprintf (tmp, sizeof tmp, "%" PRIu32 ": Message 2: 0x%08" PRIx16, i, (i % 10));
       char *payload = lstrdup (tmp);
       bool generated = osal_evt_generate ((i % 10), payload);
-      // printf ("generated [%s]: %s\n", payload, generated ? "true" : "false");
+      printf ("generated [%s]: %s\n", payload, generated ? "true" : "false");
       if (!generated) {
          free (payload);
       } else {
@@ -106,17 +115,8 @@ int main (void)
    sub_end = osal_timer_mark_ns ();
    printf ("Timer: Generated %zu events in %fms\n", g_generated, osal_timer_convert_ns_to_ms (sub_end - sub_start));
 
-#if 0
-   // Lets wait until queue count < 10 before shutting down. Otherwise, we
-   // stop all threads but one and then the last thread has thousands of
-   // events to process.
-   size_t qlen = 1024;
-   while ((qlen = osal_evt_queue_length ()) > 10) {
-      osal_thread_sleep (100);
-   }
-
+   size_t qlen = osal_evt_queue_length ();
    printf ("qcount = %zu\n", qlen);
-#endif
 
    ret = EXIT_SUCCESS;
 

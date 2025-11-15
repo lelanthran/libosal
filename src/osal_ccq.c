@@ -168,12 +168,13 @@ cleanup:
             released = true;
             break;
          }
-         // osal_thread_sleep (1);
+         // osal_thread_sleep_ms (1);
       }
       ret = ret && released;
    }
 
-   osal_semaphore_post (&ccq->semaphore);
+   if (ret)
+      osal_semaphore_post (&ccq->semaphore);
    return ret;
 }
 
@@ -238,7 +239,7 @@ cleanup:
             released = true;
             break;
          }
-         // osal_thread_sleep (1);
+         // osal_thread_sleep_ms (1);
       }
       ret = ret && released;
    }
@@ -276,7 +277,7 @@ cleanup:
             released = true;
             break;
          }
-         // osal_thread_sleep (1);
+         // osal_thread_sleep_ms (1);
       }
       if (!released) {
          ret = (size_t)-1;

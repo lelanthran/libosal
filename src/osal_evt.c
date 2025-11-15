@@ -3,37 +3,111 @@
 #include <stdlib.h>
 #include <stdint.h>
 // #include <inttypes.h>
-// #include <stdio.h>
+#include <stdio.h>
 
 #include "osal_ccq.h"
 #include "osal_evt.h"
 #include "osal_thread.h"
 
-static uint64_t g_fastlock;
+static volatile uint64_t g_fastlock;
 
 static bool lock_acquire (size_t timeout_ms)
 {
-   for (size_t i=0; i<timeout_ms; i++) {
-      if (osal_fastlock_acquire_try (&g_fastlock, NULL))
-         return true;
-      osal_thread_sleep (1);
-   }
-   return false;
+   return osal_fastlock_acquire_retry (&g_fastlock, "", 5, timeout_ms);
 }
 
 static bool lock_release (void)
 {
-   osal_fastlock_release (&g_fastlock, NULL);
+   osal_fastlock_release (&g_fastlock, "");
    return true;
 }
 
 
 
+// Data structure to store multiple handlers per event id. This cannot
+// be a linear data structure, because handlers are sometimes removed.
+//
+// A better implementation, in terms of performance, is to have a flag
+// field that has a bit for enabled/disabled and use a linear array.
+//
+// The problem with that is that the array would be reallocated each
+// time a handler is added, which would invalidated pointers to the
+// existing handler functions that are already working in the context
+// of the event_loop.
+//
+// For now, a linked list is the only viable structure.
+struct handler_ll_t {
+   osal_evt_handler_func_t *handler_fptr;
+   struct handler_ll_t *next;
+};
 
+static struct handler_ll_t *handler_append (struct handler_ll_t *first,
+                                            osal_evt_handler_func_t *handler_fptr)
+{
+   struct handler_ll_t *new = malloc (sizeof *new);
+   if (!new) {
+      return NULL;
+   }
+   struct handler_ll_t *tmp = first;
+   while (tmp && tmp->next) {
+      tmp = tmp->next;
+   }
+   if (tmp) {
+      tmp->next = new;
+   }
+   if (!first)
+      first = new;
+
+   new->handler_fptr = handler_fptr;
+   new->next = NULL;
+   return first;
+}
+
+static struct handler_ll_t *handler_copy (const struct handler_ll_t *src)
+{
+   struct handler_ll_t *ret = NULL;
+
+   if (!src ||  !(ret = malloc (sizeof *ret)))
+      return NULL;
+
+   ret->handler_fptr = src->handler_fptr;
+   ret->next = handler_copy (src->next);
+   return ret;
+}
+
+
+static void handler_remove (struct handler_ll_t *first,
+                            osal_evt_handler_func_t *handler_fptr)
+{
+   if (!first)
+      return;
+
+   struct handler_ll_t *tmp = first;
+   while (tmp && tmp->next && tmp->next->handler_fptr != handler_fptr)
+      tmp = tmp->next;
+
+   if (!tmp || !tmp->next)
+      return;
+
+   struct handler_ll_t *next = tmp->next;
+   struct handler_ll_t *nextnext = tmp->next->next;
+   free (next);
+   tmp->next = nextnext;
+}
+
+static void handler_free (struct handler_ll_t *first)
+{
+   if (!first)
+      return;
+   struct handler_ll_t *next = first->next;
+   free (first);
+   handler_free (next);
+}
 
 struct handler_t {
-   uint64_t                 evt;
-   osal_evt_handler_func_t *fptr;
+   uint64_t              evt;
+   struct handler_ll_t  *handlers;
+   osal_evt_free_func_t *free_fptr;
 };
 
 static struct handler_t *g_handlers;
@@ -53,7 +127,8 @@ static bool handlers_inc (void)
    g_handlers = tmp;
 
    g_handlers[g_nhandlers].evt = OSAL_EVT_INVALID;
-   g_handlers[g_nhandlers].fptr = NULL;
+   g_handlers[g_nhandlers].handlers = NULL;
+   g_handlers[g_nhandlers].free_fptr = NULL;
 
    g_nhandlers = newsize;
    return true;
@@ -63,7 +138,7 @@ static bool handlers_inc (void)
  * Add the specified handler for the specified event, expanding the array if
  * necessary.
  */
-static bool handlers_add (uint64_t evt, osal_evt_handler_func_t *fptr)
+static bool handlers_add (uint64_t evt, osal_evt_handler_func_t *handler_fptr)
 {
    bool error = true;
 
@@ -71,9 +146,8 @@ static bool handlers_add (uint64_t evt, osal_evt_handler_func_t *fptr)
       return false;
 
    for (size_t i=0; i<g_nhandlers; i++) {
-      if (!g_handlers[i].fptr && g_handlers[i].evt == OSAL_EVT_INVALID) {
-         g_handlers[i].evt = evt;
-         g_handlers[i].fptr = fptr;
+      if (g_handlers[i].evt == evt) {
+         g_handlers[i].handlers = handler_append (g_handlers[i].handlers, handler_fptr);
          error = false;
          goto cleanup;
       }
@@ -83,7 +157,8 @@ static bool handlers_add (uint64_t evt, osal_evt_handler_func_t *fptr)
       goto cleanup;
 
    g_handlers[g_nhandlers - 1].evt = evt;
-   g_handlers[g_nhandlers - 1].fptr = fptr;
+   g_handlers[g_nhandlers - 1].handlers = handler_append (NULL, handler_fptr);
+   g_handlers[g_nhandlers - 1].free_fptr = NULL;
 
    error = false;
 cleanup:
@@ -92,47 +167,19 @@ cleanup:
 }
 
 /* **************************************************************************
- * Remove all handler entries that match evt and fptr.
+ * Remove all handler entries that match evt and handler_fptr.
  */
-static bool handlers_remove (uint64_t evt, osal_evt_handler_func_t *fptr)
+static bool handlers_remove (uint64_t evt, osal_evt_handler_func_t *handler_fptr)
 {
    if (!(lock_acquire (500)))
       return false;
 
    for (size_t i=0; i<g_nhandlers; i++) {
-      if (g_handlers[i].evt == evt && g_handlers[i].fptr == fptr) {
-         g_handlers[i].evt = OSAL_EVT_INVALID;
-         g_handlers[i].fptr = NULL;
+      if (g_handlers[i].evt == evt) {
+         handler_remove (g_handlers[i].handlers, handler_fptr);
       }
    }
    return lock_release ();
-}
-
-/* **************************************************************************
- * Find all the events that match the specified event.
- */
-static struct handler_t *handlers_evt_find (uint64_t evt)
-{
-   struct handler_t *ret = calloc (g_nhandlers + 1, (sizeof *ret));
-   if (!ret)
-      return NULL;
-
-   if (!(lock_acquire (25))) {
-      free (ret);
-      return NULL;
-   }
-
-   size_t index = 0;
-   for (size_t i=0; i<g_nhandlers; i++) {
-      if (g_handlers[i].evt == evt) {
-         ret[index].evt = g_handlers[i].evt;
-         ret[index].fptr = g_handlers[i].fptr;
-         index++;
-      }
-   }
-
-   lock_release ();
-   return ret;
 }
 
 
@@ -148,25 +195,13 @@ static volatile uint64_t g_complete;
 /* **************************************************************************
  * The main event loop function. This waits for pointers to a event_t struct
  * on g_ccq and executes the function with the caller-provided parameter.
- *
- * A receipt of NULL causes the event loop to first free all remaining
- * items in the queue g_ccq and then end.
  */
 struct event_t {
    uint64_t                 evt_id;
-   osal_evt_handler_func_t *fptr;
+   struct handler_ll_t     *handlers;
+   osal_evt_free_func_t    *free_fptr;
    void                    *payload;
 };
-
-static bool dq_retry (osal_ccq_t *ccq, size_t n, void **dst, uint64_t *nq_time)
-{
-   for (size_t i=0; i<n; i++) {
-      if ((osal_ccq_dq_try (ccq, dst, nq_time)) && *dst && *nq_time)
-         return true;
-      osal_thread_sleep (1);
-   }
-   return false;
-}
 
 static void event_loop (void *param)
 {
@@ -179,23 +214,45 @@ static void event_loop (void *param)
       if (complete)
          break;
 
-      if (!(dq_retry (g_ccq, 50, (void **)&evt, &nq_time))) {
+      if (!(osal_ccq_dq_retry (g_ccq, (void **)&evt, &nq_time, 5, 10))) {
          continue;
       }
+      if (!evt)
+         continue;
 
-      evt->fptr (evt->evt_id, evt->payload, nq_time);
+      struct handler_ll_t *first = evt->handlers;
+      while (first) {
+         first->handler_fptr (evt->evt_id, evt->payload, nq_time);
+         first = first->next;
+      }
+      if (evt->free_fptr) {
+         evt->free_fptr (evt->payload);
+      }
+      handler_free (evt->handlers);
       free (evt);
    }
 
    while (1) {
-      if (!(dq_retry (g_ccq, 100, (void **)&evt, &nq_time))) {
+      if (!(osal_ccq_dq_retry (g_ccq, (void **)&evt, &nq_time, 5, 10))) {
          break;
       }
+      if (!evt && !nq_time)
+         break;
 
-      evt->fptr (evt->evt_id, evt->payload, nq_time);
+      if (!evt)
+         continue;
+
+      struct handler_ll_t *first = evt->handlers;
+      while (first) {
+         first->handler_fptr (evt->evt_id, evt->payload, nq_time);
+         first = first->next;
+      }
+      if (evt->free_fptr) {
+         evt->free_fptr (evt->payload);
+      }
+      handler_free (evt->handlers);
       free (evt);
    }
-
 }
 
 
@@ -246,7 +303,8 @@ void osal_evt_shutdown (void)
    }
 
    // First acquire the lock
-   lock_acquire (5000);
+   while (!(lock_acquire (5000)))
+      ;
 
    osal_atomic_store (&g_complete, 1);
 
@@ -254,6 +312,10 @@ void osal_evt_shutdown (void)
 
    while ((completed = osal_thread_wait_retry (g_threads, g_nthreads, 10, 1000)) != g_nthreads) {
       // TODO: How do we handle this without passing it to a caller?
+   }
+
+   for (size_t i=0; i<g_nhandlers; i++) {
+      handler_free (g_handlers[i].handlers);
    }
 
    free (g_handlers);
@@ -269,9 +331,28 @@ void osal_evt_shutdown (void)
    lock_release ();
 }
 
-bool osal_evt_register (uint64_t evt, osal_evt_handler_func_t *fptr)
+bool osal_evt_register_free (uint64_t evt, osal_evt_free_func_t *free_fptr)
 {
-   return handlers_add (evt, fptr);
+   bool ret = false;
+
+   lock_acquire (500);
+
+   for (size_t i=0; i<g_nhandlers; i++) {
+      if (g_handlers[i].evt != evt)
+         continue;
+
+      g_handlers[i].free_fptr = free_fptr;
+      ret = true;
+      break;
+   }
+
+   lock_release ();
+   return ret;
+}
+
+bool osal_register_handler (uint64_t evt, osal_evt_handler_func_t *handler_fptr)
+{
+   return handlers_add (evt, handler_fptr);
 }
 
 bool osal_evt_deregister (uint64_t evt, osal_evt_handler_func_t *fptr)
@@ -281,29 +362,33 @@ bool osal_evt_deregister (uint64_t evt, osal_evt_handler_func_t *fptr)
 
 bool osal_evt_generate (uint64_t evt, void *payload)
 {
-   struct handler_t *matches = handlers_evt_find (evt);
-   if (!matches)
-      return false;
+   bool ret = false;
+   while (!(lock_acquire (50)))
+      ;
+   for (size_t i=0; i < g_nhandlers; i++) {
+      if (g_handlers[i].evt != evt)
+         continue;
 
-   size_t nmatches = 0;
-   for (size_t i=0; matches[i].evt != OSAL_EVT_INVALID && matches[i].fptr; i++) {
       struct event_t *evt = malloc (sizeof *evt);
       if (!evt) {
-         free (matches);
-         return false;
+         goto cleanup;
       }
-      evt->evt_id = matches[i].evt;
-      evt->fptr = matches[i].fptr;
+      evt->evt_id = g_handlers[i].evt;
+      evt->handlers = handler_copy (g_handlers[i].handlers);
+      evt->free_fptr = g_handlers[i].free_fptr;
       evt->payload = payload;
       if (!(osal_ccq_nq (g_ccq, evt))) {
+         handler_free (evt->handlers);
          free (evt);
-         free (matches);
-         return false;
+         goto cleanup;
       }
-      nmatches++;
+      ret = true;
+      break;
    }
-   free (matches);
-   return nmatches > 0 ? true : false;
+
+cleanup:
+   lock_release ();
+   return ret;
 }
 
 size_t osal_evt_queue_length (void)

@@ -36,13 +36,13 @@ static void consumer (void *param)
    while (true) {
       if ((osal_ccq_dq_retry (queue, (void **)&message, &nq_time, 10, 100)) == false) {
          fprintf (stderr, "dequeue failure\n");
-         osal_thread_sleep(1);
+         osal_thread_sleep_ms (1);
          continue;
       }
 
       // No messages were rxed, continue
       if (message == NULL) {
-         osal_thread_sleep (1);
+         osal_thread_sleep_ms (1);
          continue;
       }
 
@@ -89,12 +89,12 @@ static void producer (void *param)
       char *msg = lstrdup (message);
       while (!(osal_ccq_nq (queue, msg))) {
          // fprintf (stderr, "enqueue failure [%s]\n", msg);
-         osal_thread_sleep(1);
+         osal_thread_sleep_ms (1);
       }
    }
 
    while (!(osal_ccq_nq (queue, END_MESSAGE))) {
-      osal_thread_sleep (1);
+      osal_thread_sleep_ms (1);
    }
 
    printf ("[producer]: Completed\n");
