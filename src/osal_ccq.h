@@ -45,27 +45,32 @@ extern "C" {
     * not indicate that a message was retrieved (the queue
     * may be empty).
     *
-    * On a return of true, *dst will be NULL and nq_time_us
-    * will be zero if there were no messages available.
+    * When there are no messages available, this function
+    * returns `true` and sets the message `*dst` to NULL and
+    * the `nq_time_us` to zero.
     *
-    * On a return of true, *dst will point to the message
-    * retrieved from the queue and nq_time_us will be
-    * populated with the time that the message entered the
-    * queue.
+    * When a message is returned, this function returns true,
+    * the `*dst` will container a pointer to the message and
+    * `nq_time_us` will contain the duration that the message
+    * spent in the queue.
     *
-    * On a return of false, both *dst and nq_time_us are
-    * invalid.
+    * On a return of false, both `*dst` and `nq_time_us` are
+    * invalid and should not be used by the caller.
     *
     */
-
-   /* Non-blocking variant of _dq */
    bool osal_ccq_dq_try (osal_ccq_t *ccq, void **dst, uint64_t *nq_time_us);
 
-   /* Retrying variant of _dq */
+   /* Wrapper around osal_ccq_dq; this function will retry the dq operation
+    * `retry` times, waiting (`interval_ms` * the retry attempt milliseconds)
+    * between retries.
+    */
    bool osal_ccq_dq_retry (osal_ccq_t *ccq, void **dst, uint64_t *nq_time_us,
                            size_t retry, size_t interval_ms);
 
-   /* Returns a count of elements in the queue */
+   /* Returns a count of elements in the queue. Note that by the time this
+    * function returns, the number of elements in the queue may have changed.
+    * This function is used exclusively for logging and diagnostics.
+    */
    size_t osal_ccq_count (osal_ccq_t *ccq);
 
 #ifdef __cplusplus

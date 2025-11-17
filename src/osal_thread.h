@@ -103,8 +103,8 @@ extern "C" {
    bool osal_mutex_acquire_try (osal_mutex_t *mutex);
 
    // A wrapper around `acquire_try`; this function attempts to acquire the
-   // mutex `retry` times, sleeping `interval_ms` milliseconds between each
-   // attempt.
+   // mutex `retry` times, delaying between each attempt using `interval_ms`
+   // multiplied by the attempt number.
    //
    // Returns true if the mutex was acquired and false if it was not
    // acquired.

@@ -56,8 +56,8 @@ extern "C" {
    //
    // As the global composite structures are not protected with locks (only
    // the elements/fields within those structures are protected with locks),
-   // be very careful to ensure that no code is calling `osal_evt_generate()` or
-   // `osal_register_handler()` when `osal_evt_startup()` is called.
+   // be very careful to ensure that no code is calling `osal_evt_generate()`
+   // or `osal_register_handler()` when `osal_evt_startup()` is called.
    //
    // The shutdown function `osal_evt_shutdown()` is safe to call at any time,
    // even with a full queue, as the shutdown process waits for the queue
@@ -73,8 +73,8 @@ extern "C" {
    bool osal_evt_register_free (uint64_t evt, osal_evt_free_func_t *free_fptr);
 
    // Register a new event using the specified function as the handler.
-   // Multiple handlers can be registered for the same event but the
-   // order of execution is indeterminate.
+   // Multiple handlers can be registered for the same event, and they
+   // are executed in the order that they are registered.
    //
    // The handle_fptr function is passed the payload, and when there are
    // no more handlers, the payload is passed to free_fptr for disposal.
@@ -88,8 +88,11 @@ extern "C" {
    bool osal_evt_deregister (uint64_t evt, osal_evt_handler_func_t *handler_fptr);
 
    // Generate a new event. All handlers registered for `evt` will be run
-   // in an indeterminate order. When there are no more handlers to run, the
-   // payload is disposed off using the free_fptr function that was registered.
+   // in the order of registration. When there are no more handlers to run,
+   // the payload is disposed off using the free_fptr function that was
+   // registered for this event. If no function was registered to dispose
+   // of the payload, nothing is run and the payload is ignored after the
+   // last handler has executed.
    //
    //    **NOTE**: If `false` is returned, the caller *must* free payload,
    // because the event will not be delivered and the handler will not get

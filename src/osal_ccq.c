@@ -182,6 +182,7 @@ static bool ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time_us,
                     size_t retry, size_t interval_ms)
 {
    bool ret = false;
+   uint64_t now = osal_timer_since_start();
    bool acquired = false;
 
    if (dst) {
@@ -215,7 +216,7 @@ static bool ccq_dq (osal_ccq_t *ccq, void **dst, uint64_t *nq_time_us,
    // Populate the outbound parameters
    *dst = ccq->array[ccq->index_retrieve].message;
    if (nq_time_us) {
-      *nq_time_us = ccq->array[ccq->index_retrieve].nq_time_us;
+      *nq_time_us = now - ccq->array[ccq->index_retrieve].nq_time_us;
    }
 
    // Increment the retrieval point. There are two possibilities
