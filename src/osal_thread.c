@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+#include <stdio.h>
 #include <inttypes.h>
 
 #ifdef PLATFORM_Windows
@@ -214,7 +215,10 @@ void osal_mutex_del (osal_mutex_t *mutex)
 
 bool osal_mutex_acquire_try (osal_mutex_t *mutex)
 {
-   return pthread_mutex_trylock (mutex) == 0;
+   if ((pthread_mutex_trylock (mutex)) == 0) {
+      return true;
+   }
+   return false;
 }
 
 bool osal_mutex_acquire_retry (osal_mutex_t *mutex, size_t retry,
@@ -222,9 +226,10 @@ bool osal_mutex_acquire_retry (osal_mutex_t *mutex, size_t retry,
 {
    size_t duration = interval_ms;
    for (size_t i=0; i<=retry; i++) {
-      if ((osal_mutex_acquire_try (mutex)) == 0)
+      if ((osal_mutex_acquire_try (mutex)) == 0) {
          return true;
-      duration = (i + 1) * interval_ms;
+      }
+      duration = i * interval_ms;
       if (duration > MAX_RETRY_DURATION_MS)
          duration = MAX_RETRY_DURATION_MS;
       osal_thread_sleep_ms (duration);
