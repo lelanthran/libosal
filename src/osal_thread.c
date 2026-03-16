@@ -143,14 +143,14 @@ bool osal_thread_new (osal_thread_t *thandle, osal_thread_func_t *fptr, void *pa
 
    bool ret = pthread_create (thandle, NULL, trunner, tr) == 0;
    if (!ret) {
-      *thandle = -1; // TODO: Not portable!!!
+      *thandle = (uint64_t)-1; // TODO: Not portable!!!
    }
    return ret;
 }
 
 static void thread_del (osal_thread_t *thread)
 {
-   *thread = -1;
+   *thread = (uint64_t)-1;
 }
 
 static bool thread_wait_retry (osal_thread_t *thread, size_t retry, size_t interval_ms)
@@ -176,8 +176,6 @@ static bool thread_wait_retry (osal_thread_t *thread, size_t retry, size_t inter
 size_t osal_thread_wait_retry (osal_thread_t *threads, size_t nthreads,
                                size_t retry, size_t interval_ms)
 {
-   // TODO: Fix this to use try semantics, and to delete each thread
-   // that was completed.
    for (size_t i=0; i < nthreads; i++) {
       if (!(thread_wait_retry (&threads[i], retry, interval_ms)))
          return i;
@@ -192,8 +190,8 @@ void osal_thread_sleep_ms (size_t ms)
 
    struct timespec tv, rem;
 
-   tv.tv_sec = ms / 1000;
-   tv.tv_nsec = (ms % 1000) * 1000000;
+   tv.tv_sec = (int64_t)ms / 1000;
+   tv.tv_nsec = ((int64_t)ms % 1000) * 1000000;
 
    nanosleep (&tv, &rem);
 }
@@ -226,7 +224,7 @@ bool osal_mutex_acquire_retry (osal_mutex_t *mutex, size_t retry,
 {
    size_t duration = interval_ms;
    for (size_t i=0; i<=retry; i++) {
-      if ((osal_mutex_acquire_try (mutex)) == 0) {
+      if ((osal_mutex_acquire_try (mutex)) == true) {
          return true;
       }
       duration = i * interval_ms;

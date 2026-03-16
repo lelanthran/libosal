@@ -70,7 +70,7 @@ typedef union _LARGE_INTEGER {
 } LARGE_INTEGER, *PLARGE_INTEGER;
  */
 
-static const uint64_t num_ns_in_sec = 1000000000ULL;
+static const int64_t num_ns_in_sec = 1000000000ULL;
 static uint64_t start_counter = 0;
 
 /* get_time_now() must be rewritten for each target platform. It must
@@ -135,8 +135,8 @@ static uint64_t get_time_now (void)
    if (clock_gettime (g_clock_id, &rt)!=0)
       return (uint64_t)-1;
 
-   now = rt.tv_sec * num_ns_in_sec;
-   now += rt.tv_nsec;
+   now = (uint64_t)(rt.tv_sec * num_ns_in_sec);
+   now += (uint64_t)rt.tv_nsec;
 
    if (now==(uint64_t)-1) {
       now++;
@@ -178,7 +178,7 @@ uint64_t osal_timer_resolution (void)
 {
    struct timespec ts = { -1, -1 };
    clock_getres (g_clock_id, &ts);
-   return ts.tv_nsec;
+   return (uint64_t)ts.tv_nsec;
 }
 
 bool osal_timer_setclock (enum osal_clock_t clk)
@@ -261,7 +261,7 @@ uint64_t osal_timer_mark_ns (void)
 
    time_us_now = get_time_now ();
    if (time_us_now == (uint64_t)-1)
-      return -1;
+      return (uint64_t)-1;
 
    if (!time_us_prev) {
       time_us_prev = time_us_now;

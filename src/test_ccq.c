@@ -91,6 +91,7 @@ static void producer (void *param)
          // fprintf (stderr, "enqueue failure [%s]\n", msg);
          osal_thread_sleep_ms (1);
       }
+      printf ("."); fflush (stdout);
    }
 
    while (!(osal_ccq_nq (queue, END_MESSAGE))) {
@@ -109,7 +110,7 @@ int main (void)
 
    osal_ccq_t *queue = NULL;
 
-   queue = osal_ccq_new (3);
+   queue = osal_ccq_new (300);
    if (!queue) {
       fprintf (stderr, "Failed to create a new queue\n");
       goto cleanup;

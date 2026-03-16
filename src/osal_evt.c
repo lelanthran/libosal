@@ -275,7 +275,7 @@ bool osal_evt_startup (size_t nthreads, size_t qlength)
    // Make them all invalid so that shutdown can proceed even if only half of
    // them were started.
    for (size_t i=0; i<g_nthreads; i++) {
-      g_threads[i] = -1;
+      g_threads[i] = (uint64_t)-1;
    }
 
    osal_atomic_store (&g_complete, 0);

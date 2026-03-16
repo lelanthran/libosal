@@ -8,11 +8,11 @@
 #include "osal_thread.h"
 #include "osal_timer.h"
 
-#undef USE_MUTEX
-#define USE_FASTLOCK 1
+// #undef USE_MUTEX
+// #define USE_FASTLOCK 1
 
-// #define USE_MUTEX 1
-// #undef USE_FASTLOCK
+#define USE_MUTEX 1
+#undef USE_FASTLOCK
 
 struct message_t {
    void *message;
@@ -122,7 +122,7 @@ bool osal_ccq_nq (osal_ccq_t *ccq, void *message)
    uint64_t now = osal_timer_since_start();
    bool acquired = false;
 
-   if (!(ACQUIRE_LOCK (&ccq->mutex, 2, 1)))
+   if (!(ACQUIRE_LOCK (&ccq->mutex, 1, 2)))
       goto cleanup;
 
    acquired = true;
